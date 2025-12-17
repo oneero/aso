@@ -35,7 +35,7 @@
             # Math
             # glm
 
-            # Wayland (SDL3 should pull these in, but explicit doesn't hurt)
+            # Wayland
             wayland
             wayland-protocols
             libxkbcommon
@@ -44,7 +44,7 @@
             cmake
             # pkg-config
             gcc
-            # ninja
+            ninja
 
             # Development tools
             gdb
@@ -54,30 +54,6 @@
             # Image loading (optional)
             # stb
           ];
-
-          shellHook = ''
-            echo "🌋 Vulkan + SDL3 + Wayland Development Environment"
-            echo "=================================================="
-            echo ""
-            echo "Versions:"
-            echo "  • Vulkan: $(pkg-config --modversion vulkan)"
-            echo "  • SDL3: $(pkg-config --modversion sdl3)"
-            echo ""
-            echo "Environment:"
-            echo "  • Display: $WAYLAND_DISPLAY"
-            echo "  • Session: $XDG_SESSION_TYPE"
-            echo ""
-
-            # Verify Vulkan
-            if vulkaninfo --summary &>/dev/null; then
-              echo "✓ Vulkan is working!"
-              vulkaninfo --summary | grep -E "GPU|deviceName|driverInfo" | head -5
-            else
-              echo "⚠ Warning: vulkaninfo failed"
-            fi
-            echo ""
-            echo "Ready to build! Try: cmake -B build -G Ninja && cmake --build build"
-          '';
 
           # Prefer Wayland for SDL3
           SDL_VIDEODRIVER = "wayland";
