@@ -16,7 +16,8 @@ find_package(SDL3 REQUIRED)
 add_executable(aso
     src/main.cpp
     src/aso.cpp
-    src/sdl.cpp
+    src/window.cpp
+    src/input.cpp
 )
 
 #add_executable(aso src/simple.cpp)
