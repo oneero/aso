@@ -6,8 +6,8 @@
 
 // state context
 struct ASO_CTX {
-  ASO_Window *window;
-  ASO_Renderer *renderer;
+  ASO_Window window;
+  ASO_Renderer renderer;
   Aso_Cmd_Buffer cmds;
   int running;
 };

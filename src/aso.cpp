@@ -12,7 +12,7 @@ void aso_init(ASO_CTX *ctx) {
   // init vulkan
 
   // show window
-  window_show(ctx->window);
+  window_show(&ctx->window);
 }
 
 void aso_run(ASO_CTX *ctx) {
@@ -25,7 +25,7 @@ void aso_run(ASO_CTX *ctx) {
   while (ctx->running > 0) {
     input_poll(&ctx->cmds);
     process_commands(ctx);
-    test_draw(ctx->renderer);
+    test_draw(&ctx->renderer);
   }
 }
 
@@ -34,7 +34,7 @@ void aso_cleanup(ASO_CTX *ctx) {
   // wait for idle
   // clean vulkan
 
-  window_cleanup(ctx->window, ctx->renderer);
+  window_cleanup(&ctx->window, &ctx->renderer);
 }
 
 void process_commands(ASO_CTX *ctx) {

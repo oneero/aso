@@ -5,12 +5,12 @@
 #include <SDL3/SDL_video.h>
 // #include <SDL3/SDL_vulkan.h>
 
-int window_init(ASO_Window **window, ASO_Renderer **renderer) {
-  aso_log("sdl_init\n");
+int window_init(ASO_Window *window, ASO_Renderer *renderer) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     aso_log("SDL init failed: %s\n", SDL_GetError());
     return 1;
   }
+  aso_log("SDL initialized\n");
 
   SDL_Window *w = nullptr;
   SDL_Renderer *r = nullptr;
@@ -24,6 +24,7 @@ int window_init(ASO_Window **window, ASO_Renderer **renderer) {
     SDL_Quit();
     return 1;
   }
+  aso_log("window created\n");
 
   r = SDL_CreateRenderer(w, nullptr); // NULL);
   if (!r) {
@@ -32,16 +33,16 @@ int window_init(ASO_Window **window, ASO_Renderer **renderer) {
     w = NULL;
     return 1;
   }
+  aso_log("renderer created\n");
 
   SDL_SetWindowPosition(w, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
   SDL_SetRenderLogicalPresentation(r, 640, 480,
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
-  (*window)->handle = w;
-  (*window)->width = 640;
-  (*window)->height = 480;
-  (*renderer)->handle = r;
+  window->handle = w;
+  window->width = 640;
+  window->height = 480;
+  renderer->handle = r;
 
   aso_log("SDL ready\n");
   return 0;
