@@ -17,7 +17,7 @@ struct Aso_Cmd_Buffer {
   int count;
 };
 
-void input_poll(Aso_Cmd_Buffer *cmds);
-void cmdbuffer_clear(Aso_Cmd_Buffer *cmds);
+void aso_input_poll(Aso_Cmd_Buffer *cmds);
+void aso_clear_cmdbuffer(Aso_Cmd_Buffer *cmds);
 
 #endif // ASO_INPUT_H

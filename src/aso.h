@@ -16,6 +16,6 @@ void aso_init(ASO_CTX *ctx);
 void aso_run(ASO_CTX *ctx);
 void aso_cleanup(ASO_CTX *ctx);
 
-void process_commands(ASO_CTX *ctx);
+void aso_process_commands(ASO_CTX *ctx);
 
 #endif // ASO_H

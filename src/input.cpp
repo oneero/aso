@@ -1,8 +1,8 @@
 #include "input.h"
 #include <SDL3/SDL.h>
 
-void input_poll(Aso_Cmd_Buffer *cmds) {
-  cmdbuffer_clear(cmds);
+void aso_input_poll(Aso_Cmd_Buffer *cmds) {
+  aso_clear_cmdbuffer(cmds);
 
   SDL_Event e;
   while (SDL_PollEvent(&e)) {
@@ -13,4 +13,4 @@ void input_poll(Aso_Cmd_Buffer *cmds) {
   }
 }
 
-void cmdbuffer_clear(Aso_Cmd_Buffer *cmds) { cmds->count = 0; }
+void aso_clear_cmdbuffer(Aso_Cmd_Buffer *cmds) { cmds->count = 0; }

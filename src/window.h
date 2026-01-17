@@ -17,10 +17,10 @@ struct ASO_Renderer {
   SDL_Renderer *handle;
 };
 
-int window_init(ASO_Window *window, ASO_Renderer *renderer);
-void window_cleanup(ASO_Window *window, ASO_Renderer *renderer);
+int aso_window_init(ASO_Window *window, ASO_Renderer *renderer);
+void aso_window_cleanup(ASO_Window *window, ASO_Renderer *renderer);
 
-void window_show(ASO_Window *window);
-void test_draw(ASO_Renderer *renderer);
+void aso_window_show(ASO_Window *window);
+void aso_test_draw(ASO_Renderer *renderer);
 
 #endif // ASO_WINDOW_H
