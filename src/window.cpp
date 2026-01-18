@@ -3,9 +3,9 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_video.h>
-// #include <SDL3/SDL_vulkan.h>
+#include <SDL3/SDL_vulkan.h>
 
-int aso_window_init(aso_window *window, aso_renderer *renderer) {
+int aso_window_init(aso_window *window) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     aso_log("SDL init failed: %s\n", SDL_GetError());
     return 1;
@@ -13,11 +13,8 @@ int aso_window_init(aso_window *window, aso_renderer *renderer) {
   aso_log("SDL initialized\n");
 
   SDL_Window *w = nullptr;
-  SDL_Renderer *r = nullptr;
 
-  // SDL_WindowFlags wflags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN |
-  // SDL_WINDOW_RESIZABLE;
-  SDL_WindowFlags wflags = SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
+  SDL_WindowFlags wflags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
   w = SDL_CreateWindow("aso", 640, 480, wflags);
   if (!w) {
     aso_log("SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -26,36 +23,24 @@ int aso_window_init(aso_window *window, aso_renderer *renderer) {
   }
   aso_log("window created\n");
 
-  r = SDL_CreateRenderer(w, nullptr); // NULL);
-  if (!r) {
-    aso_log("SDL_CreateRenderer failed: %s\n", SDL_GetError());
-    SDL_DestroyWindow(w);
-    w = NULL;
-    return 1;
-  }
-  aso_log("renderer created\n");
-
   SDL_SetWindowPosition(w, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-  SDL_SetRenderLogicalPresentation(r, 640, 480,
-                                   SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
   window->handle = w;
   window->width = 640;
   window->height = 480;
-  renderer->handle = r;
 
   aso_log("SDL ready\n");
   return 0;
 }
 
-void aso_window_cleanup(aso_window *window, aso_renderer *renderer) {
-  SDL_DestroyRenderer(renderer->handle);
+void aso_window_cleanup(aso_window *window) {
   SDL_DestroyWindow(window->handle);
   SDL_Quit();
 }
 
 void aso_window_show(aso_window *window) { SDL_ShowWindow(window->handle); }
 
+/*
 void aso_test_draw(aso_renderer *renderer) {
   const double now = ((double)SDL_GetTicks()) / 1000.0;
   const float red = (float)(0.5 + 0.5 * SDL_sin(now));
@@ -72,3 +57,4 @@ void aso_test_draw(aso_renderer *renderer) {
 
   SDL_Delay(16);
 }
+*/

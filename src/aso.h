@@ -3,11 +3,11 @@
 
 #include "input.h"
 #include "window.h"
+#include "gfx.h"
 
 // state context
 struct aso_ctx {
   aso_window window;
-  //aso_renderer renderer;
   aso_vulkan_ctx vulkan;
   aso_cmd_buffer cmds;
   int running;

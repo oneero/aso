@@ -2,14 +2,16 @@
 #include "core.h"
 #include "input.h"
 #include "window.h"
+#include "gfx.h"
 
 void aso_init(aso_ctx *ctx) {
   aso_log("aso_init\n");
 
   // init window
-  aso_window_init(&ctx->window, &ctx->renderer);
+  aso_window_init(&ctx->window);
 
   // init vulkan
+  aso_init_vulkan();
 
   // show window
   aso_window_show(&ctx->window);
@@ -24,7 +26,6 @@ void aso_run(aso_ctx *ctx) {
   while (ctx->running > 0) {
     aso_input_poll(&ctx->cmds);
     aso_process_commands(ctx);
-    aso_test_draw(&ctx->renderer);
   }
 }
 
@@ -33,7 +34,7 @@ void aso_cleanup(aso_ctx *ctx) {
   // wait for idle
   // clean vulkan
 
-  aso_window_cleanup(&ctx->window, &ctx->renderer);
+  aso_window_cleanup(&ctx->window);
 }
 
 void aso_process_commands(aso_ctx *ctx) {
