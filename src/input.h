@@ -3,21 +3,21 @@
 
 #define CMD_BUFFER_MAX 64
 
-enum Aso_Cmd_Type {
+enum aso_cmd_type {
   CMD_NONE,
   CMD_QUIT,
 };
 
-struct Aso_Cmd {
-  Aso_Cmd_Type type;
+struct aso_cmd {
+  aso_cmd_type type;
 };
 
-struct Aso_Cmd_Buffer {
-  Aso_Cmd items[CMD_BUFFER_MAX];
+struct aso_cmd_buffer {
+  aso_cmd items[CMD_BUFFER_MAX];
   int count;
 };
 
-void aso_input_poll(Aso_Cmd_Buffer *cmds);
-void aso_clear_cmdbuffer(Aso_Cmd_Buffer *cmds);
+void aso_input_poll(aso_cmd_buffer *cmds);
+void aso_clear_cmdbuffer(aso_cmd_buffer *cmds);
 
 #endif // ASO_INPUT_H

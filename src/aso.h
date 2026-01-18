@@ -5,17 +5,18 @@
 #include "window.h"
 
 // state context
-struct ASO_CTX {
-  ASO_Window window;
-  ASO_Renderer renderer;
-  Aso_Cmd_Buffer cmds;
+struct aso_ctx {
+  aso_window window;
+  //aso_renderer renderer;
+  aso_vulkan_ctx vulkan;
+  aso_cmd_buffer cmds;
   int running;
 };
 
-void aso_init(ASO_CTX *ctx);
-void aso_run(ASO_CTX *ctx);
-void aso_cleanup(ASO_CTX *ctx);
+void aso_init(aso_ctx *ctx);
+void aso_run(aso_ctx *ctx);
+void aso_cleanup(aso_ctx *ctx);
 
-void aso_process_commands(ASO_CTX *ctx);
+void aso_process_commands(aso_ctx *ctx);
 
 #endif // ASO_H

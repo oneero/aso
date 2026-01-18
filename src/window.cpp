@@ -5,7 +5,7 @@
 #include <SDL3/SDL_video.h>
 // #include <SDL3/SDL_vulkan.h>
 
-int aso_window_init(ASO_Window *window, ASO_Renderer *renderer) {
+int aso_window_init(aso_window *window, aso_renderer *renderer) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     aso_log("SDL init failed: %s\n", SDL_GetError());
     return 1;
@@ -48,15 +48,15 @@ int aso_window_init(ASO_Window *window, ASO_Renderer *renderer) {
   return 0;
 }
 
-void aso_window_cleanup(ASO_Window *window, ASO_Renderer *renderer) {
+void aso_window_cleanup(aso_window *window, aso_renderer *renderer) {
   SDL_DestroyRenderer(renderer->handle);
   SDL_DestroyWindow(window->handle);
   SDL_Quit();
 }
 
-void aso_window_show(ASO_Window *window) { SDL_ShowWindow(window->handle); }
+void aso_window_show(aso_window *window) { SDL_ShowWindow(window->handle); }
 
-void aso_test_draw(ASO_Renderer *renderer) {
+void aso_test_draw(aso_renderer *renderer) {
   const double now = ((double)SDL_GetTicks()) / 1000.0;
   const float red = (float)(0.5 + 0.5 * SDL_sin(now));
   const float green = (float)(0.5 + 0.5 * SDL_sin(now + SDL_PI_D * 2 / 3));
