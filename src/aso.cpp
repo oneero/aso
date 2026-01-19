@@ -4,8 +4,13 @@
 #include "window.h"
 #include "gfx.h"
 
+aso_ctx* g_ctx = NULL;
+
 void aso_init(aso_ctx *ctx) {
   aso_log("aso_init\n");
+
+  // set global context pointer
+  g_ctx = ctx;
 
   // init window
   aso_window_init(&ctx->window);
@@ -17,31 +22,31 @@ void aso_init(aso_ctx *ctx) {
   aso_window_show(&ctx->window);
 }
 
-void aso_run(aso_ctx *ctx) {
+void aso_run() {
   aso_log("aso_run\n");
 
-  ctx->running = 1;
+  g_ctx->running = 1;
 
   // main loop
-  while (ctx->running > 0) {
-    aso_input_poll(&ctx->cmds);
-    aso_process_commands(ctx);
+  while (g_ctx->running > 0) {
+    aso_input_poll(&g_ctx->cmds);
+    aso_process_commands(&g_ctx->cmds);
   }
 }
 
-void aso_cleanup(aso_ctx *ctx) {
+void aso_cleanup() {
   aso_log("aso_cleanup\n");
   // wait for idle
   // clean vulkan
 
-  aso_window_cleanup(&ctx->window);
+  aso_window_cleanup(&g_ctx->window);
 }
 
-void aso_process_commands(aso_ctx *ctx) {
-  for (int i = 0; i < ctx->cmds.count; i++) {
-    switch (ctx->cmds.items[i].type) {
+void aso_process_commands(aso_cmd_buffer *cmds) {
+  for (int i = 0; i < cmds->count; i++) {
+    switch (cmds->items[i].type) {
     case CMD_QUIT:
-      ctx->running = 0;
+      g_ctx->running = 0;
       break;
     default:
       break;

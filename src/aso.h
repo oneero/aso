@@ -13,10 +13,12 @@ struct aso_ctx {
   int running;
 };
 
-void aso_init(aso_ctx *ctx);
-void aso_run(aso_ctx *ctx);
-void aso_cleanup(aso_ctx *ctx);
+extern aso_ctx* g_ctx;
 
-void aso_process_commands(aso_ctx *ctx);
+void aso_init(aso_ctx *ctx);
+void aso_run();
+void aso_cleanup();
+
+void aso_process_commands(aso_cmd_buffer *cmds);
 
 #endif // ASO_H
