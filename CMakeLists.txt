@@ -14,6 +14,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Vulkan REQUIRED)
 find_package(SDL3 REQUIRED)
 
+add_compile_definitions(VULKAN_VALIDATION_LAYERS)
+
 add_executable(aso
     src/main.cpp
     src/aso.cpp

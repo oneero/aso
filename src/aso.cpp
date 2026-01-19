@@ -11,7 +11,7 @@ void aso_init(aso_ctx *ctx) {
   aso_window_init(&ctx->window);
 
   // init vulkan
-  aso_init_vulkan();
+  aso_init_vulkan(&ctx->vulkan);
 
   // show window
   aso_window_show(&ctx->window);

@@ -4,6 +4,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <cassert>
 
 // types
 typedef int8_t i8;

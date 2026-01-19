@@ -38,7 +38,14 @@ void aso_window_cleanup(aso_window *window) {
   SDL_Quit();
 }
 
-void aso_window_show(aso_window *window) { SDL_ShowWindow(window->handle); }
+void aso_window_show(aso_window *window) {
+  SDL_ShowWindow(window->handle);
+}
+
+char const * const * aso_get_window_vulkan_extensions(u32* count) {
+  return SDL_Vulkan_GetInstanceExtensions(count);
+}
+
 
 /*
 void aso_test_draw(aso_renderer *renderer) {
