@@ -44,3 +44,4 @@
 flake.lock
 build
 local_notes.md
+.cache

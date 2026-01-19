@@ -9,6 +9,7 @@ project(aso
 )
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Vulkan REQUIRED)
 find_package(SDL3 REQUIRED)
@@ -18,6 +19,7 @@ add_executable(aso
     src/aso.cpp
     src/window.cpp
     src/input.cpp
+    src/gfx.cpp
 )
 
 #add_executable(aso src/simple.cpp)
