@@ -16,6 +16,6 @@ int aso_window_init(aso_window *window);
 void aso_window_cleanup(aso_window *window);
 void aso_window_show(aso_window *window);
 
-char const * const * aso_get_window_vulkan_extensions(u32* count);
+char const * const * aso_get_window_vulkan_extensions(u32 *count);
 
 #endif // ASO_WINDOW_H

@@ -4,7 +4,6 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
-#include <cassert>
 
 // types
 typedef int8_t i8;
@@ -22,17 +21,11 @@ typedef float f32;
 
 // logging function
 // currently simply wraps printf
-inline void aso_log(const char *fmt, ...) {
+static void aso_log(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   vprintf(fmt, args);
   va_end(args);
 }
-
-// math
-
-// mem
-
-// io
 
 #endif // ASO_CORE_H

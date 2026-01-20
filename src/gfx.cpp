@@ -1,6 +1,8 @@
+#include <cassert>
 #include <cstdlib>
 #include <vulkan/vulkan_core.h>
 
+#include "core.h"
 #include "gfx.h"
 #include "window.h"
 
@@ -8,7 +10,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_vulkan_instance(&vulkan_ctx->instance);
 }
 
-void aso_create_vulkan_instance(VkInstance* instance) {
+void aso_create_vulkan_instance(VkInstance *instance) {
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   app_info.pApplicationName = "aso";
@@ -24,10 +26,10 @@ void aso_create_vulkan_instance(VkInstance* instance) {
   // get array of extensions and update count
   instance_create_info.ppEnabledExtensionNames = aso_get_vulkan_extensions(&instance_create_info.enabledExtensionCount);
 
-  aso_log("Vulkan extensions:\n");
+  aso_log("Enabled Vulkan extensions:\n");
   for (int i = 0; i < instance_create_info.enabledExtensionCount; i++) {
     aso_log(" %s\n", instance_create_info.ppEnabledExtensionNames[i]);
-	}
+  }
 
   // TODO: validation layers
   instance_create_info.enabledLayerCount = 0;
@@ -40,7 +42,7 @@ void aso_create_vulkan_instance(VkInstance* instance) {
   }
 }
 
-char const * const * aso_get_vulkan_extensions(u32* count) {
+char const * const * aso_get_vulkan_extensions(u32 *count) {
   assert(count != NULL);
 
   // get extensions from window framework (currently just SDL)

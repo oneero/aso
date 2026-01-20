@@ -1,9 +1,9 @@
 #ifndef ASO_H
 #define ASO_H
 
+#include "gfx.h"
 #include "input.h"
 #include "window.h"
-#include "gfx.h"
 
 // state context
 struct aso_ctx {
@@ -13,11 +13,11 @@ struct aso_ctx {
   int running;
 };
 
-extern aso_ctx* g_ctx;
+extern aso_ctx *g_ctx;
 
 void aso_init(aso_ctx *ctx);
-void aso_run();
-void aso_cleanup();
+void aso_run(void);
+void aso_cleanup(void);
 
 void aso_process_commands(aso_cmd_buffer *cmds);
 

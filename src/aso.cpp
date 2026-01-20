@@ -1,10 +1,10 @@
 #include "aso.h"
 #include "core.h"
+#include "gfx.h"
 #include "input.h"
 #include "window.h"
-#include "gfx.h"
 
-aso_ctx* g_ctx = NULL;
+aso_ctx *g_ctx = NULL;
 
 void aso_init(aso_ctx *ctx) {
   aso_log("aso_init\n");
@@ -22,7 +22,7 @@ void aso_init(aso_ctx *ctx) {
   aso_window_show(&ctx->window);
 }
 
-void aso_run() {
+void aso_run(void) {
   aso_log("aso_run\n");
 
   g_ctx->running = 1;
@@ -34,7 +34,7 @@ void aso_run() {
   }
 }
 
-void aso_cleanup() {
+void aso_cleanup(void) {
   aso_log("aso_cleanup\n");
   // wait for idle
   // clean vulkan
