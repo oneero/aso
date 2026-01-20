@@ -4,6 +4,7 @@
 #include "gfx.h"
 #include "input.h"
 #include "window.h"
+#include "mem.h"
 
 // state context
 struct aso_ctx {
@@ -11,6 +12,7 @@ struct aso_ctx {
   aso_vulkan_ctx vulkan;
   aso_cmd_buffer cmds;
   int running;
+  aso_arena *scratch;  
 };
 
 extern aso_ctx *g_ctx;

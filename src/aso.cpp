@@ -2,6 +2,7 @@
 #include "core.h"
 #include "gfx.h"
 #include "input.h"
+#include "mem.h"
 #include "window.h"
 
 aso_ctx *g_ctx = NULL;
@@ -11,6 +12,9 @@ void aso_init(aso_ctx *ctx) {
 
   // set global context pointer
   g_ctx = ctx;
+
+  // initialize a scratch arena
+  ctx->scratch = aso_arena_create();
 
   // init window
   aso_window_init(&ctx->window);
@@ -40,6 +44,9 @@ void aso_cleanup(void) {
   // clean vulkan
 
   aso_window_cleanup(&g_ctx->window);
+
+  // destroy arenas
+  aso_arena_destroy(g_ctx->scratch);
 }
 
 void aso_process_commands(aso_cmd_buffer *cmds) {

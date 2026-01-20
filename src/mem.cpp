@@ -1,0 +1,123 @@
+#include "mem.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
+uintptr_t aso_align_forward(uintptr_t ptr, size_t align) {
+  assert(aso_is_power_of_two(align));
+  uintptr_t p, a, modulo;
+  p = ptr;
+  a = (uintptr_t)align;
+  modulo = p & (a - 1); // remainder, a - modulo = gap to aligned value
+  if (modulo != 0) {
+    p += a - modulo; // push to aligned value
+  }
+  return p;
+};
+
+static size_t aso_get_os_page_size(void) {
+  static size_t aso_os_page_size = 0;
+  if (aso_os_page_size == 0) {
+#ifdef _WIN32
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    aso_os_page_size = si.dwPageSize;
+#else
+    aso_os_page_size = sysconf(_SC_PAGESIZE);
+#endif // _WIN32
+  }
+  return aso_os_page_size;
+}
+
+aso_arena* aso_arena_create(void) {
+  // TODO: consider mprotecting this amount from the region instead of malloc?
+  aso_arena *arena = (aso_arena*)malloc(sizeof(aso_arena));
+  if (!arena) return NULL;
+
+#ifdef _WIN32
+  void *region = VirtualAlloc(NULL, ASO_ARENA_RESERVE_SIZE, MEM_RESERVE, PAGE_NOACCESS);
+  if (!region) {
+    free(arena);
+    return NULL;
+  }
+#else
+  void *region = mmap(NULL, ASO_ARENA_RESERVE_SIZE, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (region == MAP_FAILED) {
+    free(arena);
+    return NULL;
+  }
+#endif
+
+  arena->base = (u8 *)region;
+  arena->size = 0;
+  arena->offset = 0;
+
+  return arena;
+}
+
+void* aso_arena_alloc(aso_arena *arena, size_t size, size_t align) {
+  size_t aligned_offset = aso_align_forward(arena->offset, align);
+  size_t new_offset = aligned_offset + size;
+  if (new_offset > ASO_ARENA_RESERVE_SIZE) {
+    return NULL; // out of reserved memory
+  }
+
+  if (new_offset > arena->size) { // need to commit more memory
+    // check if we are already at max capacity
+    if (arena->size == ASO_ARENA_RESERVE_SIZE) {
+      return NULL;
+    }
+
+    // align to page size
+    size_t page_size = aso_get_os_page_size();
+    size_t new_size = (new_offset + page_size - 1) / page_size * page_size;
+
+    // clamp
+    if (new_size > ASO_ARENA_RESERVE_SIZE) {
+      new_size = ASO_ARENA_RESERVE_SIZE;
+    }
+
+    size_t needed = new_size - arena->size;
+    void* start = arena->base + arena->size;
+
+#ifdef _WIN32
+    if (!VirtualAlloc(start, needed, MEM_COMMIT, PAGE_READWRITE)) {
+      return NULL;
+    }
+#else
+    if (mprotect(start, needed, PROT_READ | PROT_WRITE) != 0) {
+      return NULL;
+    }
+#endif
+
+    arena->size = new_size;
+  }
+
+  void* memory = arena->base + aligned_offset;
+  arena->offset = new_offset;
+
+  // TODO: always set to 0?
+
+  return memory;
+}
+
+void aso_arena_free(aso_arena *arena) {
+  arena->offset = 0;
+}
+
+void aso_arena_destroy(aso_arena *arena) {
+#ifdef _WIN32
+  VirtualFree(arena->base, 0, MEM_RELEASE);
+#else
+  munmap(arena->base, ASO_ARENA_RESERVE_SIZE);
+#endif
+  free(arena);
+}
