@@ -17,7 +17,10 @@ const char* aso_vulkan_validation_layers[ASO_VULKAN_VALIDATION_LAYER_COUNT] = {
 
 void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_vulkan_instance(&vulkan_ctx->instance);
+  aso_select_physical_device(vulkan_ctx);
 }
+
+// REGION: INSTANCE
 
 void aso_create_vulkan_instance(VkInstance *instance) {
   VkApplicationInfo app_info = {};
@@ -178,6 +181,87 @@ char const * const * aso_get_vulkan_layers(u32 *count) {
     return aso_vulkan_validation_layers;
   }
   return NULL;
+}
+
+// REGION: PHYSICAL DEVICE
+
+void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  vulkan_ctx->physical_device = VK_NULL_HANDLE;
+
+  u32 device_count = 0;
+  vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, nullptr);
+  if (device_count == 0) {
+    aso_log("Failed to find any devices supporting Vulkan\n");
+    exit(1);
+  }
+
+  size_t scratch_save = g_ctx->scratch->offset;
+  VkPhysicalDevice *devices = aso_arena_alloc_array(g_ctx->scratch, VkPhysicalDevice, device_count);
+
+  vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, devices);
+
+  for (int i = 0; i < device_count; i++) {
+    if (aso_is_device_suitable(devices[i])) {
+      vulkan_ctx->physical_device = devices[i];
+      break;
+    }
+  }
+
+  if (vulkan_ctx->physical_device == VK_NULL_HANDLE) {
+    aso_log("Failed to find suitable GPU\n");
+  }
+
+  g_ctx->scratch->offset = scratch_save;
+}
+
+// TODO: implement proper checks / gpu selection procedure
+bool aso_is_device_suitable(VkPhysicalDevice device) {
+  assert(device != NULL);
+
+  VkPhysicalDeviceProperties device_properties;
+  VkPhysicalDeviceFeatures device_features;
+
+  // TODO: check if these fail
+  vkGetPhysicalDeviceProperties(device, &device_properties);
+  vkGetPhysicalDeviceFeatures(device, &device_features);
+
+  aso_log(" %s\n", device_properties.deviceName);
+  
+  aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(device);
+
+  return indices.has_graphics_family;
+
+  //return device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && device_features.geometryShader;
+}
+
+aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice device) {
+  assert(device != NULL);
+
+  // NOTE: do we want scratch save here?
+
+  aso_vulkan_queue_family_indices indices = {};
+
+  u32 queue_family_count = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+  VkQueueFamilyProperties *queue_families = aso_arena_alloc_array(g_ctx->scratch, VkQueueFamilyProperties, queue_family_count);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
+  
+  for (int i = 0; i < queue_family_count; i++) {
+    if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphics_family = i;
+      indices.has_graphics_family = true;
+    }
+
+    // TODO: check for presentation
+
+    if (indices.has_graphics_family) {
+      break;
+    }
+  }
+
+  return indices;
 }
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
