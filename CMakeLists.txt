@@ -19,7 +19,7 @@ set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address -fsanitize=unde
 find_package(Vulkan REQUIRED)
 find_package(SDL3 REQUIRED)
 
-add_compile_definitions(VULKAN_VALIDATION_LAYERS)
+add_compile_definitions(ASO_VULKAN_VALIDATION_LAYERS)
 
 add_executable(aso
     src/main.cpp

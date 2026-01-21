@@ -42,7 +42,8 @@ void aso_window_show(aso_window *window) {
   SDL_ShowWindow(window->handle);
 }
 
-char const * const * aso_get_window_vulkan_extensions(u32* count) {
+char const * const * aso_get_window_vulkan_extensions(u32 *count) {
+  // TODO: find out if SDL frees these..
   return SDL_Vulkan_GetInstanceExtensions(count);
 }
 

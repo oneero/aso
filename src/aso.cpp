@@ -41,7 +41,8 @@ void aso_run(void) {
 void aso_cleanup(void) {
   aso_log("aso_cleanup\n");
   // wait for idle
-  // clean vulkan
+
+  aso_cleanup_vulkan(&g_ctx->vulkan);
 
   aso_window_cleanup(&g_ctx->window);
 
