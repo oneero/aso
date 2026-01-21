@@ -17,9 +17,7 @@ uintptr_t aso_align_forward(uintptr_t ptr, size_t align) {
   p = ptr;
   a = (uintptr_t)align;
   modulo = p & (a - 1); // remainder, a - modulo = gap to aligned value
-  if (modulo != 0) {
-    p += a - modulo; // push to aligned value
-  }
+  p += a - modulo; // push to aligned value
   return p;
 };
 
