@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdlib>
 #include <vulkan/vulkan_core.h>
@@ -240,8 +241,44 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice d
 
 // REGION: LOGICAL DEVICE
 
-void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {}
+void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
+  // TODO: cache this earlier?
+  aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx->physical_device);
+
+  VkDeviceQueueCreateInfo queue_create_info = {};
+  queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  queue_create_info.queueFamilyIndex = indices.graphics_family;
+  queue_create_info.queueCount = 1;
+
+  float queue_priority = 1.0f;
+  queue_create_info.pQueuePriorities = &queue_priority;
+
+  VkPhysicalDeviceFeatures device_features = {}; // TODO: get back to this
+
+  VkDeviceCreateInfo device_create_info = {};
+  device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  device_create_info.pQueueCreateInfos = &queue_create_info;
+  device_create_info.queueCreateInfoCount = 1;
+  device_create_info.pEnabledFeatures = &device_features;
+
+  // INFO: dont need any for now
+  device_create_info.enabledExtensionCount = 0;
+
+  // INFO: not necessary for up-to-date Vulkan SDK, but included for combatibility
+  if (aso_enable_vulkan_validation_layers) {
+    device_create_info.enabledLayerCount = ASO_VULKAN_VALIDATION_LAYER_COUNT;
+    device_create_info.ppEnabledLayerNames = aso_vulkan_validation_layers; 
+  } else {
+    device_create_info.enabledLayerCount = 0;
+  }
+
+  VK_CHECK(vkCreateDevice(vulkan_ctx->physical_device, &device_create_info, nullptr, &vulkan_ctx->device), "Failed to create logical device\n");
+
+  vkGetDeviceQueue(vulkan_ctx->device, indices.graphics_family, 0, &vulkan_ctx->graphics_queue);
+}
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
+  vkDestroyDevice(vulkan_ctx->device, nullptr);
   vkDestroyInstance(vulkan_ctx->instance, nullptr);
+  // NOTE: physical_device and queues are cleaned up implicitly
 }

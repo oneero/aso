@@ -21,6 +21,7 @@ struct aso_vulkan_ctx {
   VkInstance instance;
   VkPhysicalDevice physical_device;
   VkDevice device;
+  VkQueue graphics_queue; // single queue for now
 };
 
 struct aso_vulkan_queue_family_indices {
