@@ -92,7 +92,7 @@ VkExtensionProperties* aso_get_available_vulkan_extensions(aso_arena *arena, u32
 
   VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, NULL), "Failed to get available Vulkan extension count\n");
 
-  VkExtensionProperties *extensions = aso_arena_alloc_array(g_ctx->scratch, VkExtensionProperties, *count);
+  VkExtensionProperties *extensions = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkExtensionProperties, *count);
 
   VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, extensions), "Failed to enumerate available Vulkan extensions\n");
   return extensions;
