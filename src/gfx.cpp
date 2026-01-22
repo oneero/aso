@@ -6,7 +6,6 @@
 #include "aso.h"
 #include "core.h"
 #include "gfx.h"
-#include "window.h"
 #include "mem.h"
 
 // TODO: replace exit()s
@@ -18,6 +17,7 @@ const char* aso_vulkan_validation_layers[ASO_VULKAN_VALIDATION_LAYER_COUNT] = {
 void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_vulkan_instance(&vulkan_ctx->instance);
   aso_select_physical_device(vulkan_ctx);
+  aso_create_vulkan_logical_device(vulkan_ctx);
 }
 
 // REGION: INSTANCE
@@ -123,7 +123,7 @@ VkLayerProperties* aso_get_available_vulkan_layers(aso_arena *arena, u32 *count)
 
   VK_CHECK(vkEnumerateInstanceLayerProperties(count, NULL), "Failed to get available Vulkan layer count\n");
 
-  VkLayerProperties *layers = aso_arena_alloc_array(arena, VkLayerProperties, *count);
+  VkLayerProperties *layers = ASO_ARENA_ALLOC_ARRAY(arena, VkLayerProperties, *count);
 
   VK_CHECK(vkEnumerateInstanceLayerProperties(count, layers), "Failed to enumerate available Vulkan layers\n");
 
@@ -152,8 +152,7 @@ char const * const * aso_get_vulkan_layers(u32 *count) {
   assert(count != NULL);
 
   *count = 0;
-  if (aso_enable_vulkan_validation_layers)
-  {
+  if (aso_enable_vulkan_validation_layers) {
     *count += ASO_VULKAN_VALIDATION_LAYER_COUNT;
     return aso_vulkan_validation_layers;
   }
@@ -175,7 +174,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   }
 
   size_t scratch_save = g_ctx->scratch->offset;
-  VkPhysicalDevice *devices = aso_arena_alloc_array(g_ctx->scratch, VkPhysicalDevice, device_count);
+  VkPhysicalDevice *devices = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkPhysicalDevice, device_count);
 
   VK_CHECK(vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, devices), "Failed to enumerate GPUs");
 
@@ -193,15 +192,14 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   g_ctx->scratch->offset = scratch_save;
 }
 
-// TODO: implement proper checks / gpu selection procedure
 bool aso_is_device_suitable(VkPhysicalDevice device) {
   assert(device != NULL);
 
   VkPhysicalDeviceProperties device_properties;
   VkPhysicalDeviceFeatures device_features;
 
-  VK_CHECK(vkGetPhysicalDeviceProperties(device, &device_properties), "Failed to get GPU properties");
-  VK_CHECK(vkGetPhysicalDeviceFeatures(device, &device_features), "Failed to get GPU features");
+  vkGetPhysicalDeviceProperties(device, &device_properties);
+  vkGetPhysicalDeviceFeatures(device, &device_features);
 
   aso_log(" %s\n", device_properties.deviceName);
   
@@ -220,10 +218,10 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice d
   aso_vulkan_queue_family_indices indices = {};
 
   u32 queue_family_count = 0;
-  VK_CHECK(vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr), "Failed to get GPU queue family count");
-  VkQueueFamilyProperties *queue_families = aso_arena_alloc_array(g_ctx->scratch, VkQueueFamilyProperties, queue_family_count);
-  VK_CHECK(vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families), "Failed to get GPU queue families");
-  
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+  VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkQueueFamilyProperties, queue_family_count);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
+
   for (int i = 0; i < queue_family_count; i++) {
     if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       indices.graphics_family = i;
@@ -239,6 +237,10 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice d
 
   return indices;
 }
+
+// REGION: LOGICAL DEVICE
+
+void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {}
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDestroyInstance(vulkan_ctx->instance, nullptr);
