@@ -1,5 +1,6 @@
 #include "window.h"
 #include "core.h"
+#include "gfx.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_video.h>
@@ -47,22 +48,6 @@ char const * const * aso_get_window_vulkan_extensions(u32 *count) {
   return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
-
-/*
-void aso_test_draw(aso_renderer *renderer) {
-  const double now = ((double)SDL_GetTicks()) / 1000.0;
-  const float red = (float)(0.5 + 0.5 * SDL_sin(now));
-  const float green = (float)(0.5 + 0.5 * SDL_sin(now + SDL_PI_D * 2 / 3));
-  const float blue = (float)(0.5 + 0.5 * SDL_sin(now + SDL_PI_D * 4 / 3));
-
-  // draw
-  SDL_SetRenderDrawColorFloat(renderer->handle, red, green, blue,
-                              SDL_ALPHA_OPAQUE_FLOAT);
-  SDL_RenderClear(renderer->handle);
-
-  // present
-  SDL_RenderPresent(renderer->handle);
-
-  SDL_Delay(16);
+bool aso_create_vulkan_surface(SDL_Window *window, aso_vulkan_ctx *vulkan_ctx) {
+  return SDL_Vulkan_CreateSurface(window, vulkan_ctx->instance, NULL, &vulkan_ctx->surface);
 }
-*/

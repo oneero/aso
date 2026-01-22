@@ -8,6 +8,7 @@
 #include "core.h"
 #include "gfx.h"
 #include "mem.h"
+#include "window.h"
 
 // TODO: replace exit()s
 
@@ -17,6 +18,10 @@ const char* aso_vulkan_validation_layers[ASO_VULKAN_VALIDATION_LAYER_COUNT] = {
 
 void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_vulkan_instance(&vulkan_ctx->instance);
+  if (!aso_create_vulkan_surface(g_ctx->window.handle, vulkan_ctx)) {
+    aso_log("Failed to create SDL3 Vulkan surface\n");
+    exit(1);
+  }
   aso_select_physical_device(vulkan_ctx);
   aso_create_vulkan_logical_device(vulkan_ctx);
 }
@@ -279,6 +284,7 @@ void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDestroyDevice(vulkan_ctx->device, nullptr);
+  vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, nullptr);
   vkDestroyInstance(vulkan_ctx->instance, nullptr);
   // NOTE: physical_device and queues are cleaned up implicitly
 }
