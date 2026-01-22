@@ -43,4 +43,22 @@ bool aso_is_device_suitable(VkPhysicalDevice device);
 aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice device);
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx);
+
+// REGION: HELPER MACROS
+
+// performs call and compares result with expected (defaults to VK_SUCCESS)
+// on false outputs to log and exit(1)
+#define VK_CHECK(call, msg) VK_CHECK_EX(call, VK_SUCCESS, msg)
+#define VK_CHECK_EX(call, expected, msg) \
+  do { \
+    VkResult result = call; \
+    if (result != expected) { \
+      aso_log("VULKAN ERROR\n" \
+              " %s\n" \
+              " %s:%d: %s != %s (got %s)\n", \
+              msg, __FILE__, __LINE__, #call, #expected, result); \
+      exit(1); \
+    } \
+  } while(0)
+
 #endif // ASO_GFX_H

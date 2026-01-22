@@ -27,7 +27,7 @@ void aso_arena_destroy(aso_arena *arena);
 
 // helpers
 
-#define aso_arena_alloc_array(arena, type, count) \
-    (type*)aso_arena_alloc((arena), sizeof(type) * (count), alignof(type))
+#define ASO_ARENA_ALLOC_ARRAY(arena, type, count) \
+  (type*)aso_arena_alloc((arena), sizeof(type) * (count), alignof(type))
 
 #endif // ASO_MEM_H

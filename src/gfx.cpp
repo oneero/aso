@@ -81,10 +81,7 @@ void aso_create_vulkan_instance(VkInstance *instance) {
   // REGION: INSTANCE
   // TODO: setup debug message callback
   // TODO: use an explicit allocator
-  if (vkCreateInstance(&instance_create_info, NULL, instance) != VK_SUCCESS) {
-    aso_log("Failed to create Vulkan instance\n");
-    exit(1);
-  }
+  VK_CHECK(vkCreateInstance(&instance_create_info, NULL, instance), "Failed to create Vulkan instance\n");
   
   g_ctx->scratch->offset = scratch_save;
 }
@@ -93,21 +90,11 @@ VkExtensionProperties* aso_get_available_vulkan_extensions(aso_arena *arena, u32
   assert(arena != NULL);
   assert(count != NULL);
 
-  if (vkEnumerateInstanceExtensionProperties(NULL, count, NULL) != VK_SUCCESS) {
-    aso_log("Failed to get available Vulkan extension count\n");
-    exit(1);
-  }
+  VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, NULL), "Failed to get available Vulkan extension count\n");
 
   VkExtensionProperties *extensions = aso_arena_alloc_array(g_ctx->scratch, VkExtensionProperties, *count);
-  if (extensions == NULL) {
-    aso_log("Failed to allocate memory\n");
-    exit(1);
-  }
 
-  if (vkEnumerateInstanceExtensionProperties(NULL, count, extensions) != VK_SUCCESS) {
-    aso_log("Failed to enumerate available Vulkan extensions\n");
-    exit(1);
-  }
+  VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, extensions), "Failed to enumerate available Vulkan extensions\n");
   return extensions;
 }
 
@@ -134,21 +121,11 @@ VkLayerProperties* aso_get_available_vulkan_layers(aso_arena *arena, u32 *count)
   assert(arena != NULL);
   assert(count != NULL);
 
-  if (vkEnumerateInstanceLayerProperties(count, NULL) != VK_SUCCESS) {
-    aso_log("Failed to get available Vulkan layer count\n");
-    exit(1);
-  }
+  VK_CHECK(vkEnumerateInstanceLayerProperties(count, NULL), "Failed to get available Vulkan layer count\n");
 
   VkLayerProperties *layers = aso_arena_alloc_array(arena, VkLayerProperties, *count);
-  if (layers == NULL) {
-    aso_log("Failed to allocate memory\n");
-    exit(1);
-  }
 
-  if (vkEnumerateInstanceLayerProperties(count, layers) != VK_SUCCESS) {
-    aso_log("Failed to enumerate available Vulkan layers\n");
-    exit(1);
-  }
+  VK_CHECK(vkEnumerateInstanceLayerProperties(count, layers), "Failed to enumerate available Vulkan layers\n");
 
   return layers;
 }
@@ -200,7 +177,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   size_t scratch_save = g_ctx->scratch->offset;
   VkPhysicalDevice *devices = aso_arena_alloc_array(g_ctx->scratch, VkPhysicalDevice, device_count);
 
-  vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, devices);
+  VK_CHECK(vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, devices), "Failed to enumerate GPUs");
 
   for (int i = 0; i < device_count; i++) {
     if (aso_is_device_suitable(devices[i])) {
@@ -223,9 +200,8 @@ bool aso_is_device_suitable(VkPhysicalDevice device) {
   VkPhysicalDeviceProperties device_properties;
   VkPhysicalDeviceFeatures device_features;
 
-  // TODO: check if these fail
-  vkGetPhysicalDeviceProperties(device, &device_properties);
-  vkGetPhysicalDeviceFeatures(device, &device_features);
+  VK_CHECK(vkGetPhysicalDeviceProperties(device, &device_properties), "Failed to get GPU properties");
+  VK_CHECK(vkGetPhysicalDeviceFeatures(device, &device_features), "Failed to get GPU features");
 
   aso_log(" %s\n", device_properties.deviceName);
   
@@ -244,9 +220,9 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice d
   aso_vulkan_queue_family_indices indices = {};
 
   u32 queue_family_count = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+  VK_CHECK(vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr), "Failed to get GPU queue family count");
   VkQueueFamilyProperties *queue_families = aso_arena_alloc_array(g_ctx->scratch, VkQueueFamilyProperties, queue_family_count);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
+  VK_CHECK(vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families), "Failed to get GPU queue families");
   
   for (int i = 0; i < queue_family_count; i++) {
     if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
