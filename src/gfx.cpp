@@ -1,5 +1,4 @@
 #include <cassert>
-#include <cstdarg>
 #include <cstddef>
 #include <cstdlib>
 #include <vulkan/vulkan_core.h>
@@ -10,10 +9,15 @@
 #include "mem.h"
 #include "window.h"
 
+// TODO: refactor scratch arena usage
 // TODO: replace exit()s
 
 const char* aso_vulkan_validation_layers[ASO_VULKAN_VALIDATION_LAYER_COUNT] = {
-	"VK_LAYER_KHRONOS_validation"
+  "VK_LAYER_KHRONOS_validation"
+};
+
+const char* aso_vulkan_device_extensions[ASO_VULKAN_DEVICE_EXTENSION_COUNT] = {
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
@@ -171,7 +175,9 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   assert(vulkan_ctx != NULL);
 
   vulkan_ctx->physical_device = VK_NULL_HANDLE;
-
+ 
+  aso_log("Finding suitable GPU..\n");
+  
   u32 device_count = 0;
   vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, nullptr);
   if (device_count == 0) {
@@ -187,6 +193,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   for (int i = 0; i < device_count; i++) {
     if (aso_is_device_suitable(vulkan_ctx, devices[i])) {
       vulkan_ctx->physical_device = devices[i];
+      aso_log(" = suitable\n");
       break;
     }
   }
@@ -208,11 +215,12 @@ bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physica
   vkGetPhysicalDeviceProperties(physical_device, &device_properties);
   vkGetPhysicalDeviceFeatures(physical_device, &device_features);
 
-  aso_log(" %s\n", device_properties.deviceName);
+  aso_log("\n%s\n", device_properties.deviceName);
   
   aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx, physical_device);
+  bool extensions_supported = aso_check_device_extension_support(physical_device);
 
-  return indices.has_graphics_family && indices.has_present_family;
+  return indices.has_graphics_family && indices.has_present_family && extensions_supported;
 
   //return device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && device_features.geometryShader;
 }
@@ -248,6 +256,31 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vu
   }
 
   return indices;
+}
+
+bool aso_check_device_extension_support(VkPhysicalDevice physical_device) {
+  u32 extension_count;
+  vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, nullptr);
+
+  VkExtensionProperties *available_extensions = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkExtensionProperties, extension_count);
+  vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, available_extensions);
+
+  // check each required extension is supported
+  for (int i = 0; i < ASO_VULKAN_DEVICE_EXTENSION_COUNT; i++) {
+    bool found = false;
+    for (int j = 0; j < extension_count; j++) {
+      if (strcmp(aso_vulkan_device_extensions[i], available_extensions[j].extensionName) == 0) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      aso_log(" Missing support for %s\n", aso_vulkan_device_extensions[i]);
+      return false;
+    }
+  }
+
+  return true;
 }
 
 // REGION: LOGICAL DEVICE
