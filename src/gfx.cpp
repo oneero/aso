@@ -29,6 +29,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   }
   aso_select_physical_device(vulkan_ctx);
   aso_create_vulkan_logical_device(vulkan_ctx);
+  aso_create_swap_chain(vulkan_ctx);
 }
 
 // REGION: INSTANCE
@@ -225,6 +226,7 @@ bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physica
   bool swap_chain_ok = false;
   if (extensions_supported) {
     size_t scratch_save = g_ctx->scratch->offset;
+    // TODO: cache the details for later
     aso_vulkan_swap_chain_support_details details = aso_query_swap_chain_support(vulkan_ctx, physical_device);
     swap_chain_ok = details.formats_count > 0 && details.present_modes_count > 0;
     g_ctx->scratch->offset = scratch_save;
@@ -371,7 +373,104 @@ void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
   vkGetDeviceQueue(vulkan_ctx->device, indices.present_family, 0, &vulkan_ctx->presentation_queue);
 }
 
+// REGION: SWAP CHAIN
+
+void aso_create_swap_chain(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  aso_log("\nCreating swap chain..\n");
+
+  size_t scratch_save = g_ctx->scratch->offset;
+
+  aso_vulkan_swap_chain_support_details details = aso_query_swap_chain_support(vulkan_ctx, vulkan_ctx->physical_device);
+
+  // surface format
+  VkSurfaceFormatKHR surface_format = details.formats[0];
+  for (int i = 0; i < details.formats_count; i++) {
+    if (details.formats[i].format == VK_FORMAT_B8G8R8A8_SRGB && details.formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      surface_format = details.formats[i];
+      break;
+    }
+  }
+
+  // present mode
+  VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+  for (int i = 0; i < details.present_modes_count; i++) {
+    if (details.present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+      present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+      break;
+    }
+  }
+  
+  // extent
+  VkExtent2D extent = aso_select_swap_extent(&details.capabilities);
+  aso_log(" Extent: %d x %d\n", extent.width, extent.height);
+
+  u32 image_count = details.capabilities.minImageCount + 1;
+  if (details.capabilities.maxImageCount > 0 && image_count > details.capabilities.maxImageCount) {
+    image_count = details.capabilities.maxImageCount;
+  }
+
+  VkSwapchainCreateInfoKHR create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  create_info.surface = vulkan_ctx->surface;
+  create_info.imageFormat = surface_format.format;
+  create_info.imageColorSpace = surface_format.colorSpace;
+  create_info.imageExtent = extent;
+  create_info.imageArrayLayers = 1;
+  create_info.minImageCount = image_count;
+  create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+  aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx, vulkan_ctx->physical_device);
+  u32 queue_family_indices[] = { indices.graphics_family, indices.present_family };
+
+  // if the queue families are different, we use concurrent mode to share images
+  // NOTE: exclusive mode is ideal but requires explicit ownership transfers
+  if (indices.graphics_family != indices.present_family) {
+    create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+    create_info.queueFamilyIndexCount = 2; // TODO: this should not be hardcoded
+    create_info.pQueueFamilyIndices = queue_family_indices;
+  } else {
+    create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  }
+
+  create_info.preTransform = details.capabilities.currentTransform;
+  create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  create_info.presentMode = present_mode;
+  create_info.clipped = VK_TRUE;
+  create_info.oldSwapchain = VK_NULL_HANDLE;
+
+  VK_CHECK(vkCreateSwapchainKHR(vulkan_ctx->device, &create_info, nullptr, &vulkan_ctx->swap_chain), "Failed to create swap chain\n");
+
+  g_ctx->scratch->offset = scratch_save;
+}
+
+VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities) {
+  assert(capabilities != NULL);
+
+  // check current extents for special value
+  // -> go with already set extent
+  // -> special value set: set swap extent here and the surface will conform
+  if (capabilities->currentExtent.width != 0xFFFFFFFF) {
+    return capabilities->currentExtent;
+  } else {
+    int width, height;
+    aso_get_window_size(&g_ctx->window, &width, &height);
+
+    VkExtent2D extent = {
+      CLAMP(width, capabilities->minImageExtent.width, capabilities->maxImageExtent.width),
+      CLAMP(height, capabilities->minImageExtent.height, capabilities->maxImageExtent.height)
+    };
+
+    return extent;
+  }
+}
+
+// REGION: CLEANUP
+
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
+  vkDeviceWaitIdle(vulkan_ctx->device);
+  vkDestroySwapchainKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, nullptr);
   vkDestroyDevice(vulkan_ctx->device, nullptr);
   vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, nullptr);
   vkDestroyInstance(vulkan_ctx->instance, nullptr);

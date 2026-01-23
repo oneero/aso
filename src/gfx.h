@@ -25,6 +25,7 @@ struct aso_vulkan_ctx {
   VkQueue graphics_queue;
   VkQueue presentation_queue;
   VkSurfaceKHR surface;
+  VkSwapchainKHR swap_chain;
 };
 
 struct aso_vulkan_queue_family_indices {
@@ -58,6 +59,9 @@ bool aso_check_device_extension_support(VkPhysicalDevice physical_device);
 aso_vulkan_swap_chain_support_details aso_query_swap_chain_support(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device);
 
 void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx);
+
+void aso_create_swap_chain(aso_vulkan_ctx *vulkan_ctx);
+VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities);
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx);
 

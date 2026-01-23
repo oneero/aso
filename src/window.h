@@ -16,6 +16,7 @@ struct aso_window {
 int aso_window_init(aso_window *window);
 void aso_window_cleanup(aso_window *window);
 void aso_window_show(aso_window *window);
+void aso_get_window_size(aso_window *window, int *width, int *height);
 
 char const * const * aso_get_window_vulkan_extensions(u32 *count);
 bool aso_create_vulkan_surface(SDL_Window *window, aso_vulkan_ctx *vulkan_ctx);
