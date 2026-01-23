@@ -185,7 +185,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   VK_CHECK(vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, devices), "Failed to enumerate GPUs");
 
   for (int i = 0; i < device_count; i++) {
-    if (aso_is_device_suitable(devices[i])) {
+    if (aso_is_device_suitable(vulkan_ctx, devices[i])) {
       vulkan_ctx->physical_device = devices[i];
       break;
     }
@@ -198,35 +198,36 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   g_ctx->scratch->offset = scratch_save;
 }
 
-bool aso_is_device_suitable(VkPhysicalDevice device) {
-  assert(device != NULL);
+bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device) {
+  assert(vulkan_ctx != NULL);
+  assert(physical_device != NULL);
 
   VkPhysicalDeviceProperties device_properties;
   VkPhysicalDeviceFeatures device_features;
 
-  vkGetPhysicalDeviceProperties(device, &device_properties);
-  vkGetPhysicalDeviceFeatures(device, &device_features);
+  vkGetPhysicalDeviceProperties(physical_device, &device_properties);
+  vkGetPhysicalDeviceFeatures(physical_device, &device_features);
 
   aso_log(" %s\n", device_properties.deviceName);
   
-  aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(device);
+  aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx, physical_device);
 
   return indices.has_graphics_family;
 
   //return device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && device_features.geometryShader;
 }
 
-aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice device) {
-  assert(device != NULL);
+aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device) {
+  assert(vulkan_ctx != NULL);
 
   // NOTE: do we want scratch save here?
 
   aso_vulkan_queue_family_indices indices = {};
 
   u32 queue_family_count = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
   VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkQueueFamilyProperties, queue_family_count);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
+  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
   for (int i = 0; i < queue_family_count; i++) {
     if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -234,9 +235,14 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice d
       indices.has_graphics_family = true;
     }
 
-    // TODO: check for presentation
+    VkBool32 presentation_support = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, vulkan_ctx->surface, &presentation_support);
+    if (presentation_support) {
+      indices.present_family = i;
+      indices.has_present_family = true;
+    }
 
-    if (indices.has_graphics_family) {
+    if (indices.has_graphics_family && indices.has_present_family) {
       break;
     }
   }
@@ -248,28 +254,42 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(VkPhysicalDevice d
 
 void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
   // TODO: cache this earlier?
-  aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx->physical_device);
+  aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx, vulkan_ctx->physical_device);
 
-  VkDeviceQueueCreateInfo queue_create_info = {};
-  queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  queue_create_info.queueFamilyIndex = indices.graphics_family;
-  queue_create_info.queueCount = 1;
+  // use a bitmap to produce an array of unique VkDeviceQueueCreateInfo
+  // NOTE: max 8 unique queue families
+  u8 unique_families = 0;
+  u8 unique_family_count = 0;
+  unique_families |= (1 << indices.graphics_family);
+  unique_families |= (1 << indices.present_family);
 
+  VkDeviceQueueCreateInfo queue_create_infos[8];
   float queue_priority = 1.0f;
-  queue_create_info.pQueuePriorities = &queue_priority;
+
+  for (u8 i = 0; i < 8; i++) {
+    if (unique_families & (1 << i)) {
+      queue_create_infos[unique_family_count++] = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = i,
+        .queueCount = 1,
+        .pQueuePriorities = & queue_priority,
+      };   
+    }
+  }
 
   VkPhysicalDeviceFeatures device_features = {}; // TODO: get back to this
 
   VkDeviceCreateInfo device_create_info = {};
   device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  device_create_info.pQueueCreateInfos = &queue_create_info;
-  device_create_info.queueCreateInfoCount = 1;
+  device_create_info.pQueueCreateInfos = queue_create_infos;
+  device_create_info.queueCreateInfoCount = unique_family_count;
   device_create_info.pEnabledFeatures = &device_features;
 
   // INFO: dont need any for now
   device_create_info.enabledExtensionCount = 0;
 
-  // INFO: not necessary for up-to-date Vulkan SDK, but included for combatibility
+  // validation layers are already defined at instance level, so there are
+  // not necessary for up-to-date Vulkan SDK, but included for combatibility
   if (aso_enable_vulkan_validation_layers) {
     device_create_info.enabledLayerCount = ASO_VULKAN_VALIDATION_LAYER_COUNT;
     device_create_info.ppEnabledLayerNames = aso_vulkan_validation_layers; 
@@ -280,6 +300,7 @@ void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
   VK_CHECK(vkCreateDevice(vulkan_ctx->physical_device, &device_create_info, nullptr, &vulkan_ctx->device), "Failed to create logical device\n");
 
   vkGetDeviceQueue(vulkan_ctx->device, indices.graphics_family, 0, &vulkan_ctx->graphics_queue);
+  vkGetDeviceQueue(vulkan_ctx->device, indices.present_family, 0, &vulkan_ctx->presentation_queue);
 }
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
