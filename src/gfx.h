@@ -34,6 +34,14 @@ struct aso_vulkan_queue_family_indices {
   bool has_present_family;
 };
 
+struct aso_vulkan_swap_chain_support_details {
+  VkSurfaceCapabilitiesKHR capabilities;
+  VkSurfaceFormatKHR *formats;
+  u32 formats_count;
+  VkPresentModeKHR *present_modes;
+  u32 present_modes_count;
+};
+
 void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_create_vulkan_instance(VkInstance *instance);
@@ -47,6 +55,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx);
 bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device);
 aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device);
 bool aso_check_device_extension_support(VkPhysicalDevice physical_device);
+aso_vulkan_swap_chain_support_details aso_query_swap_chain_support(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device);
 
 void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx);
 

@@ -10,6 +10,7 @@
 #include "window.h"
 
 // TODO: refactor scratch arena usage
+// TODO: cleanup
 // TODO: replace exit()s
 
 const char* aso_vulkan_validation_layers[ASO_VULKAN_VALIDATION_LAYER_COUNT] = {
@@ -216,13 +217,20 @@ bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physica
   vkGetPhysicalDeviceFeatures(physical_device, &device_features);
 
   aso_log("\n%s\n", device_properties.deviceName);
-  
+
   aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx, physical_device);
   bool extensions_supported = aso_check_device_extension_support(physical_device);
 
-  return indices.has_graphics_family && indices.has_present_family && extensions_supported;
+  // only check for swap chain support if the extension is supported
+  bool swap_chain_ok = false;
+  if (extensions_supported) {
+    size_t scratch_save = g_ctx->scratch->offset;
+    aso_vulkan_swap_chain_support_details details = aso_query_swap_chain_support(vulkan_ctx, physical_device);
+    swap_chain_ok = details.formats_count > 0 && details.present_modes_count > 0;
+    g_ctx->scratch->offset = scratch_save;
+  }
 
-  //return device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && device_features.geometryShader;
+  return indices.has_graphics_family && indices.has_present_family && extensions_supported && swap_chain_ok;
 }
 
 aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device) {
@@ -259,6 +267,8 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vu
 }
 
 bool aso_check_device_extension_support(VkPhysicalDevice physical_device) {
+  assert(physical_device != NULL);
+
   u32 extension_count;
   vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, nullptr);
 
@@ -283,9 +293,34 @@ bool aso_check_device_extension_support(VkPhysicalDevice physical_device) {
   return true;
 }
 
+aso_vulkan_swap_chain_support_details aso_query_swap_chain_support(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device) {
+  assert(vulkan_ctx != NULL);
+  assert(physical_device != NULL);
+
+  aso_vulkan_swap_chain_support_details details = {0};
+
+  // capabilities
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, vulkan_ctx->surface, &details.capabilities);
+
+  // formats
+  vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vulkan_ctx->surface, &details.formats_count, NULL);
+  details.formats = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkSurfaceFormatKHR, details.formats_count);
+  vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vulkan_ctx->surface, &details.formats_count, details.formats);
+
+  // present modes
+  vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, vulkan_ctx->surface, &details.present_modes_count, NULL);
+  details.present_modes = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkPresentModeKHR, details.present_modes_count);
+  vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, vulkan_ctx->surface, &details.present_modes_count, details.present_modes);
+
+  return details;
+}
+
+
 // REGION: LOGICAL DEVICE
 
 void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
   // TODO: cache this earlier?
   aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx, vulkan_ctx->physical_device);
 
@@ -318,8 +353,8 @@ void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
   device_create_info.queueCreateInfoCount = unique_family_count;
   device_create_info.pEnabledFeatures = &device_features;
 
-  // INFO: dont need any for now
-  device_create_info.enabledExtensionCount = 0;
+  device_create_info.enabledExtensionCount = ASO_VULKAN_DEVICE_EXTENSION_COUNT;
+  device_create_info.ppEnabledExtensionNames = aso_vulkan_device_extensions;
 
   // validation layers are already defined at instance level, so there are
   // not necessary for up-to-date Vulkan SDK, but included for combatibility
