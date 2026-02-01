@@ -19,6 +19,13 @@ typedef float f32;
 #define MB(n) (KB(n) * 1024ull)
 #define GB(n) (MB(n) * 1024ull)
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define CLAMP(value, low, high) (MAX(low, MIN(value, high)))
+#define ABS(x) ((x) < 0 ? -(x) : (x))
+#define SIGN(x) ((x) > 0 ? 1 : ((x) < 0 ? -1 : 0))
+#define SQUARE(x) ((x) * (x))
+
 // logging function
 // currently simply wraps printf
 static void aso_log(const char *fmt, ...) {

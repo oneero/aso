@@ -31,16 +31,19 @@ void aso_run(void) {
 
   g_ctx->running = 1;
 
+  int frame = 0;
+  int max_frames = 100;
+
   // main loop
-  while (g_ctx->running > 0) {
+  while (g_ctx->running > 0 && frame < max_frames) {
     aso_input_poll(&g_ctx->cmds);
     aso_process_commands(&g_ctx->cmds);
+    frame++;
   }
 }
 
 void aso_cleanup(void) {
   aso_log("aso_cleanup\n");
-  // wait for idle
 
   aso_cleanup_vulkan(&g_ctx->vulkan);
 
