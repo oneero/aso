@@ -32,6 +32,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_select_physical_device(vulkan_ctx);
   aso_create_vulkan_logical_device(vulkan_ctx);
   aso_create_swap_chain(vulkan_ctx);
+  aso_create_image_views(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
 }
@@ -435,7 +436,14 @@ void aso_create_swap_chain(aso_vulkan_ctx *vulkan_ctx) {
 
   VK_CHECK(vkCreateSwapchainKHR(vulkan_ctx->device, &create_info, nullptr, &vulkan_ctx->swap_chain), "Failed to create swap chain\n");
 
-  g_ctx->scratch->offset = scratch_save;
+  // retrieve swap chain image handles
+  vkGetSwapchainImagesKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, &vulkan_ctx->swap_chain_images_count, nullptr);
+  vulkan_ctx->swap_chain_images = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkImage, vulkan_ctx->swap_chain_images_count);
+  vkGetSwapchainImagesKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, &vulkan_ctx->swap_chain_images_count, vulkan_ctx->swap_chain_images);
+
+  // store format and extent for later use
+  vulkan_ctx->swap_chain_format = surface_format.format;
+  vulkan_ctx->swap_chain_extent = extent;
 }
 
 VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities) {
@@ -459,10 +467,42 @@ VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities) {
   }
 }
 
+// REGION: IMAGE VIEWS
+
+void aso_create_image_views(aso_vulkan_ctx *vulkan_ctx) {
+  vulkan_ctx->swap_chain_image_views_count = vulkan_ctx->swap_chain_images_count;
+  vulkan_ctx->swap_chain_image_views = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkImageView, vulkan_ctx->swap_chain_image_views_count);
+  for (size_t i = 0; i < vulkan_ctx->swap_chain_images_count; i++) {
+    VkImageViewCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    create_info.image = vulkan_ctx->swap_chain_images[i];
+    create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    create_info.format = vulkan_ctx->swap_chain_format;
+    create_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    create_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    create_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    create_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    // subresourceRange describes image view usage details
+    create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    create_info.subresourceRange.baseMipLevel = 0;
+    create_info.subresourceRange.levelCount = 1;
+    create_info.subresourceRange.baseArrayLayer = 0;
+    create_info.subresourceRange.layerCount = 1;
+
+    VK_CHECK(vkCreateImageView(vulkan_ctx->device, &create_info, nullptr, &vulkan_ctx->swap_chain_image_views[i]), "Failed to create image view");
+  }
+}
+
 // REGION: CLEANUP
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
+
+  // swap chain image views
+  for (size_t i = 0; i < vulkan_ctx->swap_chain_image_views_count; i++) {
+    vkDestroyImageView(vulkan_ctx->device, vulkan_ctx->swap_chain_image_views[i], nullptr);
+  }
+
   vkDestroySwapchainKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, nullptr);
   vkDestroyDevice(vulkan_ctx->device, nullptr);
   vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, nullptr);
