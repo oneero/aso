@@ -6,12 +6,19 @@
 
 #include "core.h"
 
+#define ASO_ARENA_DEBUG
+
 #define ASO_ARENA_RESERVE_SIZE GB(64) // ensure this aligns to page size
 
 struct aso_arena {
   u8 *base;
   size_t size;
   size_t offset;
+#ifdef ASO_ARENA_DEBUG
+  size_t alloc_count;
+  size_t alloc_total;
+  size_t peak;
+#endif
 };
 
 static inline bool aso_is_power_of_two(uintptr_t x) {
