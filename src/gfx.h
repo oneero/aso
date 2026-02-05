@@ -8,9 +8,9 @@
 #include "mem.h"
 
 #ifdef ASO_VULKAN_VALIDATION_LAYERS
-  static bool aso_enable_vulkan_validation_layers = true;
+static bool aso_enable_vulkan_validation_layers = true;
 #else
-  static bool aso_enable_vulkan_validation_layers = false;
+static bool aso_enable_vulkan_validation_layers = false;
 #endif
 
 #define ASO_VULKAN_VALIDATION_LAYER_COUNT 1
@@ -18,6 +18,7 @@
 
 // vulkan context
 struct aso_vulkan_ctx {
+  aso_arena *arena;
   // these are pointer sized handles, Vulkan manages the lifetime
   VkInstance instance;
   VkPhysicalDevice physical_device;
@@ -45,7 +46,7 @@ struct aso_vulkan_swap_chain_support_details {
 
 void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx);
 
-void aso_create_vulkan_instance(VkInstance *instance);
+void aso_create_vulkan_instance(aso_vulkan_ctx *vulkan_ctx);
 VkExtensionProperties* aso_get_available_vulkan_extensions(aso_arena *arena, u32 *count);
 char const * const * aso_get_vulkan_extensions(u32 *count);
 VkLayerProperties* aso_get_available_vulkan_layers(aso_arena *arena, u32 *count);
@@ -55,7 +56,7 @@ bool aso_check_vulkan_validation_layer_support(VkLayerProperties *available_laye
 void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx);
 bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device);
 aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device);
-bool aso_check_device_extension_support(VkPhysicalDevice physical_device);
+bool aso_check_device_extension_support(aso_arena *arena, VkPhysicalDevice physical_device);
 aso_vulkan_swap_chain_support_details aso_query_swap_chain_support(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device);
 
 void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx);

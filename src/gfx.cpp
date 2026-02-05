@@ -22,7 +22,9 @@ const char* aso_vulkan_device_extensions[ASO_VULKAN_DEVICE_EXTENSION_COUNT] = {
 };
 
 void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
-  aso_create_vulkan_instance(&vulkan_ctx->instance);
+  vulkan_ctx->arena = aso_arena_create();
+
+  aso_create_vulkan_instance(vulkan_ctx);
   if (!aso_create_vulkan_surface(g_ctx->window.handle, vulkan_ctx)) {
     aso_log("Failed to create SDL3 Vulkan surface\n");
     exit(1);
@@ -30,11 +32,15 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_select_physical_device(vulkan_ctx);
   aso_create_vulkan_logical_device(vulkan_ctx);
   aso_create_swap_chain(vulkan_ctx);
+
+  aso_arena_free(vulkan_ctx->arena);
 }
 
 // REGION: INSTANCE
 
-void aso_create_vulkan_instance(VkInstance *instance) {
+void aso_create_vulkan_instance(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   app_info.pApplicationName = "aso";
@@ -47,14 +53,11 @@ void aso_create_vulkan_instance(VkInstance *instance) {
   instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   instance_create_info.pApplicationInfo = &app_info;
 
-  // TODO: add dedicated arenas to vulkan_ctx
-  size_t scratch_save = g_ctx->scratch->offset;
-
   // REGION: LAYERS
 
   // list avaiable layers
   u32 available_layer_count = 0;
-  VkLayerProperties *layers = aso_get_available_vulkan_layers(g_ctx->scratch, &available_layer_count);
+  VkLayerProperties *layers = aso_get_available_vulkan_layers(vulkan_ctx->arena, &available_layer_count);
   aso_log("Available Vulkan layers:\n");
   for (int i = 0; i < available_layer_count; i++) {
     aso_log(" %s\n", layers[i].layerName);
@@ -76,7 +79,7 @@ void aso_create_vulkan_instance(VkInstance *instance) {
 
   // list available extensions
   u32 available_extension_count = 0;
-  VkExtensionProperties *extensions = aso_get_available_vulkan_extensions(g_ctx->scratch, &available_extension_count); 
+  VkExtensionProperties *extensions = aso_get_available_vulkan_extensions(vulkan_ctx->arena, &available_extension_count); 
   aso_log("Available Vulkan extensions:\n");
   for (u32 i = 0; i < available_extension_count; i++) {
     aso_log(" %s\n", extensions[i].extensionName);
@@ -93,9 +96,7 @@ void aso_create_vulkan_instance(VkInstance *instance) {
   // REGION: INSTANCE
   // TODO: setup debug message callback
   // TODO: use an explicit allocator
-  VK_CHECK(vkCreateInstance(&instance_create_info, NULL, instance), "Failed to create Vulkan instance\n");
-  
-  g_ctx->scratch->offset = scratch_save;
+  VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &vulkan_ctx->instance), "Failed to create Vulkan instance\n");
 }
 
 VkExtensionProperties* aso_get_available_vulkan_extensions(aso_arena *arena, u32 *count) {
@@ -104,7 +105,7 @@ VkExtensionProperties* aso_get_available_vulkan_extensions(aso_arena *arena, u32
 
   VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, NULL), "Failed to get available Vulkan extension count\n");
 
-  VkExtensionProperties *extensions = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkExtensionProperties, *count);
+  VkExtensionProperties *extensions = ASO_ARENA_ALLOC_ARRAY(arena, VkExtensionProperties, *count);
 
   VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, extensions), "Failed to enumerate available Vulkan extensions\n");
   return extensions;
@@ -187,8 +188,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
     exit(1);
   }
 
-  size_t scratch_save = g_ctx->scratch->offset;
-  VkPhysicalDevice *devices = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkPhysicalDevice, device_count);
+  VkPhysicalDevice *devices = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkPhysicalDevice, device_count);
 
   VK_CHECK(vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, devices), "Failed to enumerate GPUs");
 
@@ -203,8 +203,6 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   if (vulkan_ctx->physical_device == VK_NULL_HANDLE) {
     aso_log("Failed to find suitable GPU\n");
   }
-
-  g_ctx->scratch->offset = scratch_save;
 }
 
 bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device) {
@@ -220,16 +218,14 @@ bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physica
   aso_log("\n%s\n", device_properties.deviceName);
 
   aso_vulkan_queue_family_indices indices = aso_get_vulkan_family_indices(vulkan_ctx, physical_device);
-  bool extensions_supported = aso_check_device_extension_support(physical_device);
+  bool extensions_supported = aso_check_device_extension_support(vulkan_ctx->arena, physical_device);
 
   // only check for swap chain support if the extension is supported
   bool swap_chain_ok = false;
   if (extensions_supported) {
-    size_t scratch_save = g_ctx->scratch->offset;
     // TODO: cache the details for later
     aso_vulkan_swap_chain_support_details details = aso_query_swap_chain_support(vulkan_ctx, physical_device);
     swap_chain_ok = details.formats_count > 0 && details.present_modes_count > 0;
-    g_ctx->scratch->offset = scratch_save;
   }
 
   return indices.has_graphics_family && indices.has_present_family && extensions_supported && swap_chain_ok;
@@ -237,14 +233,11 @@ bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physica
 
 aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device) {
   assert(vulkan_ctx != NULL);
-
-  // NOTE: do we want scratch save here?
-
   aso_vulkan_queue_family_indices indices = {};
 
   u32 queue_family_count = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
-  VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkQueueFamilyProperties, queue_family_count);
+  VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkQueueFamilyProperties, queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
   for (int i = 0; i < queue_family_count; i++) {
@@ -268,13 +261,13 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vu
   return indices;
 }
 
-bool aso_check_device_extension_support(VkPhysicalDevice physical_device) {
+bool aso_check_device_extension_support(aso_arena *arena, VkPhysicalDevice physical_device) {
   assert(physical_device != NULL);
 
   u32 extension_count;
   vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, nullptr);
 
-  VkExtensionProperties *available_extensions = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkExtensionProperties, extension_count);
+  VkExtensionProperties *available_extensions = ASO_ARENA_ALLOC_ARRAY(arena, VkExtensionProperties, extension_count);
   vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, available_extensions);
 
   // check each required extension is supported
@@ -306,12 +299,12 @@ aso_vulkan_swap_chain_support_details aso_query_swap_chain_support(aso_vulkan_ct
 
   // formats
   vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vulkan_ctx->surface, &details.formats_count, NULL);
-  details.formats = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkSurfaceFormatKHR, details.formats_count);
+  details.formats = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkSurfaceFormatKHR, details.formats_count);
   vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, vulkan_ctx->surface, &details.formats_count, details.formats);
 
   // present modes
   vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, vulkan_ctx->surface, &details.present_modes_count, NULL);
-  details.present_modes = ASO_ARENA_ALLOC_ARRAY(g_ctx->scratch, VkPresentModeKHR, details.present_modes_count);
+  details.present_modes = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkPresentModeKHR, details.present_modes_count);
   vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, vulkan_ctx->surface, &details.present_modes_count, details.present_modes);
 
   return details;
@@ -474,5 +467,6 @@ void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDestroyDevice(vulkan_ctx->device, nullptr);
   vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, nullptr);
   vkDestroyInstance(vulkan_ctx->instance, nullptr);
+  aso_arena_destroy(vulkan_ctx->arena);
   // NOTE: physical_device and queues are cleaned up implicitly
 }
