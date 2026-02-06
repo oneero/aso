@@ -32,12 +32,13 @@ void aso_run(void) {
   g_ctx->running = 1;
 
   int frame = 0;
-  int max_frames = 100;
+  int max_frames = 100000;
 
   // main loop
   while (g_ctx->running > 0 && frame < max_frames) {
     aso_input_poll(&g_ctx->cmds);
     aso_process_commands(&g_ctx->cmds);
+    aso_draw_frame(&g_ctx->vulkan);
     frame++;
   }
 }

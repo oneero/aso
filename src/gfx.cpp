@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <vulkan/vulkan_core.h>
 
@@ -39,6 +40,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_framebuffers(vulkan_ctx);
   aso_create_command_pool(vulkan_ctx);
   aso_create_command_buffer(vulkan_ctx);
+  aso_create_sync_objects(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
 }
@@ -697,6 +699,18 @@ void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx) {
   render_pass_info.subpassCount = 1;
   render_pass_info.pSubpasses = &subpass;
 
+  // create a dependency in order to wait until we have an image from the swap chain
+  VkSubpassDependency dependency = {};
+  dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  dependency.dstSubpass = 0;
+  dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.srcAccessMask = 0;
+  dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+  render_pass_info.dependencyCount = 1;
+  render_pass_info.pDependencies = &dependency;
+
   VK_CHECK(vkCreateRenderPass(vulkan_ctx->device, &render_pass_info, nullptr, &vulkan_ctx->render_pass), "Failed to create render pass\n");
 }
 
@@ -810,10 +824,84 @@ void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index) {
   VK_CHECK(vkEndCommandBuffer(vulkan_ctx->command_buffer), "Failed to record command buffer\n");
 }
 
+void aso_create_sync_objects(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  VkSemaphoreCreateInfo semaphore_info = {};
+  semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+  VkFenceCreateInfo fence_info = {};
+  fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so we dont block forever on first frame
+
+  VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->image_available_semaphore), "Failed to create semaphore\n");
+  VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->render_finished_semaphore), "Failed to create semaphore\n");
+  VK_CHECK(vkCreateFence(vulkan_ctx->device, &fence_info, nullptr, &vulkan_ctx->in_flight_fence), "Failed to create fence\n");
+}
+
+// REGION: DRAW FRAME
+
+void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  aso_log("waiting for fence..\n");
+
+  vkWaitForFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fence, VK_TRUE, UINT64_MAX);
+  vkResetFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fence);
+  aso_log("acquiring image\n");
+
+  u32 image_index;
+  vkAcquireNextImageKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, UINT64_MAX, vulkan_ctx->image_available_semaphore, VK_NULL_HANDLE, &image_index);
+  aso_log("resetting cmd buffer\n");
+
+  vkResetCommandBuffer(vulkan_ctx->command_buffer, 0);
+  aso_log("recording cmd buffer\n");
+  aso_record_command_buffer(vulkan_ctx, image_index);
+
+  VkSubmitInfo submit_info = {};
+  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+  VkSemaphore wait_semaphores[] = {vulkan_ctx->image_available_semaphore};
+  VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  submit_info.waitSemaphoreCount = 1;
+  submit_info.pWaitSemaphores = wait_semaphores;
+  submit_info.pWaitDstStageMask = wait_stages;
+
+  submit_info.commandBufferCount = 1;
+  submit_info.pCommandBuffers = &vulkan_ctx->command_buffer;
+
+  VkSemaphore signal_semaphores[] = {vulkan_ctx->render_finished_semaphore};
+  submit_info.signalSemaphoreCount = 1;
+  submit_info.pSignalSemaphores = signal_semaphores;
+  aso_log("submitting to graphics queue\n");
+
+  VK_CHECK(vkQueueSubmit(vulkan_ctx->graphics_queue, 1, &submit_info, vulkan_ctx->in_flight_fence), "Failed to submit draw command buffer\n");
+
+  VkPresentInfoKHR present_info = {};
+  present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  present_info.waitSemaphoreCount = 1;
+  present_info.pWaitSemaphores = signal_semaphores;
+
+  VkSwapchainKHR swap_chains[] = {vulkan_ctx->swap_chain};
+  present_info.swapchainCount = 1;
+  present_info.pSwapchains = swap_chains;
+  present_info.pImageIndices = &image_index;
+
+  present_info.pResults = nullptr; // optional
+  aso_log("submitting to present queue\n");
+
+  vkQueuePresentKHR(vulkan_ctx->presentation_queue, &present_info);
+  aso_log("done\n\n");
+}
+
 // REGION: CLEANUP
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
+
+  vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->image_available_semaphore, nullptr);
+  vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->render_finished_semaphore, nullptr);
+  vkDestroyFence(vulkan_ctx->device, vulkan_ctx->in_flight_fence, nullptr);
 
   vkDestroyCommandPool(vulkan_ctx->device, vulkan_ctx->command_pool, nullptr);
 

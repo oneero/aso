@@ -40,6 +40,9 @@ struct aso_vulkan_ctx {
   u32 swap_chain_framebuffers_count;
   VkCommandPool command_pool;
   VkCommandBuffer command_buffer;
+  VkSemaphore image_available_semaphore;
+  VkSemaphore render_finished_semaphore;
+  VkFence in_flight_fence;
 };
 
 struct aso_vulkan_queue_family_indices {
@@ -88,6 +91,10 @@ void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx);
 void aso_create_command_buffer(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index);
+
+void aso_create_sync_objects(aso_vulkan_ctx *vulkan_ctx);
+
+void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx);
 
