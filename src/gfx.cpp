@@ -624,6 +624,30 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
 
   VK_CHECK(vkCreatePipelineLayout(vulkan_ctx->device, &pipeline_layout_info, nullptr, &vulkan_ctx->pipeline_layout), "Failed to create pipeline layout\n");
 
+  VkGraphicsPipelineCreateInfo pipeline_info = {};
+  pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  pipeline_info.stageCount = 2;
+  pipeline_info.pStages = shader_stages;
+
+  pipeline_info.pVertexInputState = &vertex_input_info;
+  pipeline_info.pInputAssemblyState = &input_assembly;
+  pipeline_info.pViewportState = &viewport_state;
+  pipeline_info.pRasterizationState = &rasterizer;
+  pipeline_info.pMultisampleState = &multisampling;
+  pipeline_info.pDepthStencilState = nullptr; // optional
+  pipeline_info.pColorBlendState = &color_blending;
+  pipeline_info.pDynamicState = &dynamic_state;
+
+  pipeline_info.layout = vulkan_ctx->pipeline_layout;
+  pipeline_info.renderPass = vulkan_ctx->render_pass;
+  pipeline_info.subpass = 0;
+
+  // if using derivative pipeline..
+  pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // optional
+  pipeline_info.basePipelineIndex = -1; // optional
+ 
+  VK_CHECK(vkCreateGraphicsPipelines(vulkan_ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &vulkan_ctx->graphics_pipeline), "Failed to create graphics pipeline\n");
+
   vkDestroyShaderModule(vulkan_ctx->device, frag_shader_module, nullptr);
   vkDestroyShaderModule(vulkan_ctx->device, vert_shader_module, nullptr);
 }
@@ -678,6 +702,7 @@ void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx) {
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
 
+  vkDestroyPipeline(vulkan_ctx->device, vulkan_ctx->graphics_pipeline, nullptr);
   vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, nullptr);
   vkDestroyRenderPass(vulkan_ctx->device, vulkan_ctx->render_pass, nullptr);
 

@@ -35,6 +35,7 @@ struct aso_vulkan_ctx {
   u32 swap_chain_image_views_count;
   VkRenderPass render_pass;
   VkPipelineLayout pipeline_layout;
+  VkPipeline graphics_pipeline;
 };
 
 struct aso_vulkan_queue_family_indices {
