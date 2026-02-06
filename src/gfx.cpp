@@ -590,8 +590,8 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   // TODO: add depth and stencil states?
 
   // color blending
-
   // NOTE:: alpha blending disabled for now
+
   VkPipelineColorBlendAttachmentState color_blend_attachment = {};
   color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
   color_blend_attachment.blendEnable = VK_FALSE;
@@ -602,6 +602,17 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // optional
   color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD; // optional
 
+  VkPipelineColorBlendStateCreateInfo color_blending = {};
+  color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  color_blending.logicOpEnable = VK_FALSE;
+  color_blending.logicOp = VK_LOGIC_OP_COPY; // optional
+  color_blending.attachmentCount = 1;
+  color_blending.pAttachments = &color_blend_attachment;
+  color_blending.blendConstants[0] = 0.0f; // optional
+  color_blending.blendConstants[1] = 0.0f; // optional
+  color_blending.blendConstants[2] = 0.0f; // optional
+  color_blending.blendConstants[3] = 0.0f; // optional
+  
   // pipeline layout for uniforms
 
   VkPipelineLayoutCreateInfo pipeline_layout_info = {};
