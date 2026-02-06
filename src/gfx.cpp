@@ -36,6 +36,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_image_views(vulkan_ctx);
   aso_create_render_pass(vulkan_ctx);
   aso_create_graphics_pipeline(vulkan_ctx);
+  aso_create_framebuffers(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
 }
@@ -697,10 +698,42 @@ void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx) {
   VK_CHECK(vkCreateRenderPass(vulkan_ctx->device, &render_pass_info, nullptr, &vulkan_ctx->render_pass), "Failed to create render pass\n");
 }
 
+// REGION: FRAMEBUFFERS
+
+void aso_create_framebuffers(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  // we create a framebuffer for each imageview in the swap chain
+
+  vulkan_ctx->swap_chain_framebuffers_count = vulkan_ctx->swap_chain_image_views_count;
+  vulkan_ctx->swap_chain_framebuffers = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkFramebuffer, vulkan_ctx->swap_chain_framebuffers_count);
+
+  for (size_t i = 0; i < vulkan_ctx->swap_chain_image_views_count; i++) {
+    VkImageView attachments[] = {
+      vulkan_ctx->swap_chain_image_views[i]
+    };
+    VkFramebufferCreateInfo framebuffer_info = {};
+    framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebuffer_info.renderPass = vulkan_ctx->render_pass;
+    framebuffer_info.attachmentCount = 1;
+    framebuffer_info.pAttachments = attachments;
+    framebuffer_info.width = vulkan_ctx->swap_chain_extent.width;
+    framebuffer_info.height = vulkan_ctx->swap_chain_extent.height;
+    framebuffer_info.layers = 1;
+
+    VK_CHECK(vkCreateFramebuffer(vulkan_ctx->device, &framebuffer_info, nullptr, &vulkan_ctx->swap_chain_framebuffers[i]), "Failed to create framebuffer\n");
+  }
+}
+
 // REGION: CLEANUP
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
+
+  // framebuffers
+  for (size_t i = 0; i < vulkan_ctx->swap_chain_framebuffers_count; i++) {
+    vkDestroyFramebuffer(vulkan_ctx->device, vulkan_ctx->swap_chain_framebuffers[i], nullptr);
+  }
 
   vkDestroyPipeline(vulkan_ctx->device, vulkan_ctx->graphics_pipeline, nullptr);
   vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, nullptr);
