@@ -33,6 +33,7 @@ struct aso_vulkan_ctx {
   u32 swap_chain_images_count;
   VkImageView *swap_chain_image_views;
   u32 swap_chain_image_views_count;
+  VkRenderPass render_pass;
   VkPipelineLayout pipeline_layout;
 };
 
@@ -74,6 +75,8 @@ VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities);
 void aso_create_image_views(aso_vulkan_ctx *vulkan_ctx);
 void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx);
 VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long code_size);
+
+void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx);
 

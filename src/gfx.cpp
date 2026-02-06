@@ -34,6 +34,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_vulkan_logical_device(vulkan_ctx);
   aso_create_swap_chain(vulkan_ctx);
   aso_create_image_views(vulkan_ctx);
+  aso_create_render_pass(vulkan_ctx);
   aso_create_graphics_pipeline(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
@@ -576,7 +577,7 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   rasterizer.depthBiasClamp = 0.0f; // optional
   rasterizer.depthBiasSlopeFactor = 0.0f; // optional
 
-  // TODO: enable multisampling later
+  // TODO: enable later
   VkPipelineMultisampleStateCreateInfo multisampling = {};
   multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   multisampling.sampleShadingEnable = VK_FALSE;
@@ -626,12 +627,48 @@ VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long c
   return module;
 }
 
+// REGION: RENDER PASS
+
+void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  VkAttachmentDescription color_attachment = {};
+  color_attachment.format = vulkan_ctx->swap_chain_format;
+  color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  // subpass
+  VkAttachmentReference color_attachment_reference = {};
+  color_attachment_reference.attachment = 0;
+  color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass = {};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_attachment_reference;
+
+  VkRenderPassCreateInfo render_pass_info = {};
+  render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  render_pass_info.attachmentCount = 1;
+  render_pass_info.pAttachments = &color_attachment;
+  render_pass_info.subpassCount = 1;
+  render_pass_info.pSubpasses = &subpass;
+
+  VK_CHECK(vkCreateRenderPass(vulkan_ctx->device, &render_pass_info, nullptr, &vulkan_ctx->render_pass), "Failed to create render pass\n");
+}
+
 // REGION: CLEANUP
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
 
   vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, nullptr);
+  vkDestroyRenderPass(vulkan_ctx->device, vulkan_ctx->render_pass, nullptr);
 
   // swap chain image views
   for (size_t i = 0; i < vulkan_ctx->swap_chain_image_views_count; i++) {
