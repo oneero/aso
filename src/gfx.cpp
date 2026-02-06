@@ -8,6 +8,7 @@
 #include "gfx.h"
 #include "mem.h"
 #include "window.h"
+#include "io.h"
 
 // TODO: refactor scratch arena usage
 // TODO: cleanup
@@ -33,6 +34,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_vulkan_logical_device(vulkan_ctx);
   aso_create_swap_chain(vulkan_ctx);
   aso_create_image_views(vulkan_ctx);
+  aso_create_graphics_pipeline(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
 }
@@ -491,6 +493,56 @@ void aso_create_image_views(aso_vulkan_ctx *vulkan_ctx) {
 
     VK_CHECK(vkCreateImageView(vulkan_ctx->device, &create_info, nullptr, &vulkan_ctx->swap_chain_image_views[i]), "Failed to create image view");
   }
+}
+
+// REGION: GRAPHICS PIPELINE
+
+void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+  assert(vulkan_ctx->arena != NULL);
+
+  // load shader bytecode into shader modules
+
+  size_t check_point = vulkan_ctx->arena->offset;
+
+  long vert_shader_code_size = 0;
+  long frag_shader_code_size = 0;
+  u8 *vert_shader_code = aso_read_binary_file(vulkan_ctx->arena, "assets/vert.spv", &vert_shader_code_size);
+  u8 *frag_shader_code = aso_read_binary_file(vulkan_ctx->arena, "assets/frag.spv", &frag_shader_code_size);
+  VkShaderModule vert_shader_module = aso_create_shader_module(vulkan_ctx->device, vert_shader_code, vert_shader_code_size);
+  VkShaderModule frag_shader_module = aso_create_shader_module(vulkan_ctx->device, frag_shader_code, frag_shader_code_size);
+
+  // we dont need the shader code anymore
+  vulkan_ctx->arena->offset = check_point;
+
+  // shader stages
+  
+  VkPipelineShaderStageCreateInfo vert_shader_stage_info = {};
+  vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+  vert_shader_stage_info.module = vert_shader_module;
+  vert_shader_stage_info.pName = "main";
+  vert_shader_stage_info.pSpecializationInfo = nullptr; // no constants
+
+  VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
+  frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  frag_shader_stage_info.module = frag_shader_module;
+  frag_shader_stage_info.pName = "main";
+  frag_shader_stage_info.pSpecializationInfo = nullptr; // no constants
+
+  VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
+
+}
+
+VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long code_size) {
+  VkShaderModuleCreateInfo create_info = {};
+  create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  create_info.codeSize = code_size;
+  create_info.pCode = (const u32 *)shader_code;
+  VkShaderModule module;
+  VK_CHECK(vkCreateShaderModule(device, &create_info, nullptr, &module), "Failed to create shader module\n");
+  return module;
 }
 
 // REGION: CLEANUP
