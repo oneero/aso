@@ -40,6 +40,7 @@ add_executable(aso
     src/input.cpp
     src/gfx.cpp
     src/mem.cpp
+    src/io.cpp
 )
 
 #add_executable(aso src/simple.cpp)
