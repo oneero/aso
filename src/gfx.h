@@ -39,6 +39,7 @@ struct aso_vulkan_ctx {
   VkFramebuffer *swap_chain_framebuffers;
   u32 swap_chain_framebuffers_count;
   VkCommandPool command_pool;
+  VkCommandBuffer command_buffer;
 };
 
 struct aso_vulkan_queue_family_indices {
@@ -84,6 +85,9 @@ void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx);
 void aso_create_framebuffers(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx);
+void aso_create_command_buffer(aso_vulkan_ctx *vulkan_ctx);
+
+void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index);
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx);
 

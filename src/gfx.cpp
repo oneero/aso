@@ -38,6 +38,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_graphics_pipeline(vulkan_ctx);
   aso_create_framebuffers(vulkan_ctx);
   aso_create_command_pool(vulkan_ctx);
+  aso_create_command_buffer(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
 }
@@ -739,6 +740,74 @@ void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx) {
   pool_info.queueFamilyIndex = queue_family_indices.graphics_family;
 
   VK_CHECK(vkCreateCommandPool(vulkan_ctx->device, &pool_info, nullptr, &vulkan_ctx->command_pool), "Failed to create command pool\n");
+}
+
+// REGION: COMMAND BUFFER
+
+void aso_create_command_buffer(aso_vulkan_ctx *vulkan_ctx) {
+  VkCommandBufferAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  alloc_info.commandPool = vulkan_ctx->command_pool;
+  alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  alloc_info.commandBufferCount = 1;
+
+  VK_CHECK(vkAllocateCommandBuffers(vulkan_ctx->device, &alloc_info, &vulkan_ctx->command_buffer), "Failed to allocate command buffers\n");
+}
+
+void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index) {
+  assert(vulkan_ctx != NULL);
+
+  // begin
+
+  VkCommandBufferBeginInfo begin_info = {};
+  begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  begin_info.flags = 0; // optional
+  begin_info.pInheritanceInfo = nullptr; // optional
+
+  VK_CHECK(vkBeginCommandBuffer(vulkan_ctx->command_buffer, &begin_info), "Failed to begin recording command buffer\n");
+
+  // start render pass
+
+  VkRenderPassBeginInfo render_pass_info = {};
+  render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  render_pass_info.renderPass = vulkan_ctx->render_pass;
+  render_pass_info.framebuffer = vulkan_ctx->swap_chain_framebuffers[image_index];
+  render_pass_info.renderArea.offset = {0, 0};
+  render_pass_info.renderArea.extent = vulkan_ctx->swap_chain_extent;
+  
+  VkClearValue clear_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+  render_pass_info.clearValueCount = 1;
+  render_pass_info.pClearValues = &clear_color;
+
+  vkCmdBeginRenderPass(vulkan_ctx->command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+  // bind pipeline
+
+  vkCmdBindPipeline(vulkan_ctx->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vulkan_ctx->graphics_pipeline);
+
+  // define viewport and scissor as they were set to dynamic
+
+  VkViewport viewport = {};
+  viewport.x = 0.0f;
+  viewport.y = 0.0f;
+  viewport.width = (float) vulkan_ctx->swap_chain_extent.width;
+  viewport.height = (float) vulkan_ctx->swap_chain_extent.height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+  vkCmdSetViewport(vulkan_ctx->command_buffer, 0, 1, &viewport);
+
+  VkRect2D scissor = {};
+  scissor.offset = {0, 0};
+  scissor.extent = vulkan_ctx->swap_chain_extent;
+  vkCmdSetScissor(vulkan_ctx->command_buffer, 0, 1, &scissor);
+
+  // draw!
+
+  vkCmdDraw(vulkan_ctx->command_buffer, 3, 1, 0, 0);
+
+  vkCmdEndRenderPass(vulkan_ctx->command_buffer);
+
+  VK_CHECK(vkEndCommandBuffer(vulkan_ctx->command_buffer), "Failed to record command buffer\n");
 }
 
 // REGION: CLEANUP
