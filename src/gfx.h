@@ -38,6 +38,7 @@ struct aso_vulkan_ctx {
   VkPipeline graphics_pipeline;
   VkFramebuffer *swap_chain_framebuffers;
   u32 swap_chain_framebuffers_count;
+  VkCommandPool command_pool;
 };
 
 struct aso_vulkan_queue_family_indices {
@@ -81,6 +82,8 @@ VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long c
 
 void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx);
 void aso_create_framebuffers(aso_vulkan_ctx *vulkan_ctx);
+
+void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx);
 

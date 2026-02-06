@@ -37,6 +37,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_render_pass(vulkan_ctx);
   aso_create_graphics_pipeline(vulkan_ctx);
   aso_create_framebuffers(vulkan_ctx);
+  aso_create_command_pool(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
 }
@@ -725,10 +726,27 @@ void aso_create_framebuffers(aso_vulkan_ctx *vulkan_ctx) {
   }
 }
 
+// REGION: COMMAND POOL
+
+void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  aso_vulkan_queue_family_indices queue_family_indices = aso_get_vulkan_family_indices(vulkan_ctx, vulkan_ctx->physical_device);
+
+  VkCommandPoolCreateInfo pool_info = {};
+  pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // reset command buffers every frame
+  pool_info.queueFamilyIndex = queue_family_indices.graphics_family;
+
+  VK_CHECK(vkCreateCommandPool(vulkan_ctx->device, &pool_info, nullptr, &vulkan_ctx->command_pool), "Failed to create command pool\n");
+}
+
 // REGION: CLEANUP
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
+
+  vkDestroyCommandPool(vulkan_ctx->device, vulkan_ctx->command_pool, nullptr);
 
   // framebuffers
   for (size_t i = 0; i < vulkan_ctx->swap_chain_framebuffers_count; i++) {
