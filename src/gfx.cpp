@@ -533,6 +533,87 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
+  // vertex input
+
+  // vertex info is hardcoded in shader for now
+  VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
+  vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertex_input_info.vertexBindingDescriptionCount = 0;
+  vertex_input_info.pVertexAttributeDescriptions = nullptr; // optional
+  vertex_input_info.vertexAttributeDescriptionCount = 0;
+  vertex_input_info.pVertexAttributeDescriptions = nullptr; // optional
+
+  VkPipelineInputAssemblyStateCreateInfo input_assembly = {};
+  input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  input_assembly.primitiveRestartEnable = VK_FALSE;
+
+  // viewport and scissor as dynamic states to be specified at draw time
+  VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+  VkPipelineDynamicStateCreateInfo dynamic_state = {};
+  dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  dynamic_state.dynamicStateCount = 2;
+  dynamic_state.pDynamicStates = dynamic_states;
+
+  VkPipelineViewportStateCreateInfo viewport_state = {};
+  viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+  viewport_state.viewportCount = 1;
+  viewport_state.scissorCount = 1;
+
+  // rasterizer
+
+  VkPipelineRasterizationStateCreateInfo rasterizer = {};
+  rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer.depthClampEnable = VK_FALSE;
+  rasterizer.rasterizerDiscardEnable = VK_FALSE;
+  rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+  rasterizer.lineWidth = 1.0f;
+  rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+  rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+  rasterizer.depthBiasEnable = VK_FALSE;
+  rasterizer.depthBiasConstantFactor = 0.0f; // optional
+  rasterizer.depthBiasClamp = 0.0f; // optional
+  rasterizer.depthBiasSlopeFactor = 0.0f; // optional
+
+  // TODO: enable multisampling later
+  VkPipelineMultisampleStateCreateInfo multisampling = {};
+  multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+  multisampling.sampleShadingEnable = VK_FALSE;
+  multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+  multisampling.minSampleShading = 1.0f; // optional
+  multisampling.pSampleMask = nullptr; // optional
+  multisampling.alphaToCoverageEnable = VK_FALSE; // optional
+  multisampling.alphaToOneEnable = VK_FALSE; // optional
+
+  // TODO: add depth and stencil states?
+
+  // color blending
+
+  // NOTE:: alpha blending disabled for now
+  VkPipelineColorBlendAttachmentState color_blend_attachment = {};
+  color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  color_blend_attachment.blendEnable = VK_FALSE;
+  color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; // optional
+  color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA; // optional
+  color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD; // optional
+  color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // optional
+  color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // optional
+  color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD; // optional
+
+  // pipeline layout for uniforms
+
+  VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+  pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipeline_layout_info.setLayoutCount = 0; // optional
+  pipeline_layout_info.pSetLayouts = nullptr; // optional
+  pipeline_layout_info.pushConstantRangeCount = 0; // optional
+  pipeline_layout_info.pPushConstantRanges = nullptr; // optional
+
+  VK_CHECK(vkCreatePipelineLayout(vulkan_ctx->device, &pipeline_layout_info, nullptr, &vulkan_ctx->pipeline_layout), "Failed to create pipeline layout\n");
+
+  vkDestroyShaderModule(vulkan_ctx->device, frag_shader_module, nullptr);
+  vkDestroyShaderModule(vulkan_ctx->device, vert_shader_module, nullptr);
 }
 
 VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long code_size) {
@@ -549,6 +630,8 @@ VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long c
 
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
+
+  vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, nullptr);
 
   // swap chain image views
   for (size_t i = 0; i < vulkan_ctx->swap_chain_image_views_count; i++) {

@@ -33,6 +33,7 @@ struct aso_vulkan_ctx {
   u32 swap_chain_images_count;
   VkImageView *swap_chain_image_views;
   u32 swap_chain_image_views_count;
+  VkPipelineLayout pipeline_layout;
 };
 
 struct aso_vulkan_queue_family_indices {
