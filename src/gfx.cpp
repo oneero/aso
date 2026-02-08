@@ -11,7 +11,6 @@
 #include "window.h"
 #include "io.h"
 
-// TODO: refactor scratch arena usage
 // TODO: cleanup
 // TODO: replace exit()s
 
@@ -41,8 +40,6 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_command_pool(vulkan_ctx);
   aso_create_command_buffers(vulkan_ctx);
   aso_create_sync_objects(vulkan_ctx);
-
-  aso_arena_free(vulkan_ctx->arena);
 }
 
 // REGION: INSTANCE
@@ -383,8 +380,6 @@ void aso_create_swap_chain(aso_vulkan_ctx *vulkan_ctx) {
   assert(vulkan_ctx != NULL);
 
   aso_log("\nCreating swap chain..\n");
-
-  size_t scratch_save = g_ctx->scratch->offset;
 
   aso_vulkan_swap_chain_support_details details = aso_query_swap_chain_support(vulkan_ctx, vulkan_ctx->physical_device);
 
@@ -993,6 +988,7 @@ void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDestroyDevice(vulkan_ctx->device, nullptr);
   vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, nullptr);
   vkDestroyInstance(vulkan_ctx->instance, nullptr);
+
   aso_arena_destroy(vulkan_ctx->arena);
   // NOTE: physical_device and queues are cleaned up implicitly
 }
