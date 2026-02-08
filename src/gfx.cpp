@@ -39,7 +39,7 @@ void aso_init_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   aso_create_graphics_pipeline(vulkan_ctx);
   aso_create_framebuffers(vulkan_ctx);
   aso_create_command_pool(vulkan_ctx);
-  aso_create_command_buffer(vulkan_ctx);
+  aso_create_command_buffers(vulkan_ctx);
   aso_create_sync_objects(vulkan_ctx);
 
   aso_arena_free(vulkan_ctx->arena);
@@ -465,7 +465,7 @@ VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities) {
   } else {
     int width, height;
     aso_get_window_size(&g_ctx->window, &width, &height);
-
+    aso_log("Window extent: %dx%d\n", width, height);
     VkExtent2D extent = {
       CLAMP(width, capabilities->minImageExtent.width, capabilities->maxImageExtent.width),
       CLAMP(height, capabilities->minImageExtent.height, capabilities->maxImageExtent.height)
@@ -758,18 +758,24 @@ void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx) {
 
 // REGION: COMMAND BUFFER
 
-void aso_create_command_buffer(aso_vulkan_ctx *vulkan_ctx) {
+void aso_create_command_buffers(aso_vulkan_ctx *vulkan_ctx) {
+  assert (vulkan_ctx != NULL);
+
+  vulkan_ctx->command_buffers = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkCommandBuffer, ASO_VULKAN_FRAMES_IN_FLIGHT);
+
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   alloc_info.commandPool = vulkan_ctx->command_pool;
   alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  alloc_info.commandBufferCount = 1;
+  alloc_info.commandBufferCount = ASO_VULKAN_FRAMES_IN_FLIGHT;
 
-  VK_CHECK(vkAllocateCommandBuffers(vulkan_ctx->device, &alloc_info, &vulkan_ctx->command_buffer), "Failed to allocate command buffers\n");
+  VK_CHECK(vkAllocateCommandBuffers(vulkan_ctx->device, &alloc_info, vulkan_ctx->command_buffers), "Failed to allocate command buffers\n");
 }
 
 void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index) {
   assert(vulkan_ctx != NULL);
+
+  u32 f = vulkan_ctx->frame;
 
   // begin
 
@@ -778,7 +784,7 @@ void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index) {
   begin_info.flags = 0; // optional
   begin_info.pInheritanceInfo = nullptr; // optional
 
-  VK_CHECK(vkBeginCommandBuffer(vulkan_ctx->command_buffer, &begin_info), "Failed to begin recording command buffer\n");
+  VK_CHECK(vkBeginCommandBuffer(vulkan_ctx->command_buffers[f], &begin_info), "Failed to begin recording command buffer\n");
 
   // start render pass
 
@@ -793,11 +799,11 @@ void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index) {
   render_pass_info.clearValueCount = 1;
   render_pass_info.pClearValues = &clear_color;
 
-  vkCmdBeginRenderPass(vulkan_ctx->command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(vulkan_ctx->command_buffers[f], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
   // bind pipeline
 
-  vkCmdBindPipeline(vulkan_ctx->command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vulkan_ctx->graphics_pipeline);
+  vkCmdBindPipeline(vulkan_ctx->command_buffers[f], VK_PIPELINE_BIND_POINT_GRAPHICS, vulkan_ctx->graphics_pipeline);
 
   // define viewport and scissor as they were set to dynamic
 
@@ -808,24 +814,29 @@ void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index) {
   viewport.height = (float) vulkan_ctx->swap_chain_extent.height;
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(vulkan_ctx->command_buffer, 0, 1, &viewport);
+  vkCmdSetViewport(vulkan_ctx->command_buffers[f], 0, 1, &viewport);
 
   VkRect2D scissor = {};
   scissor.offset = {0, 0};
   scissor.extent = vulkan_ctx->swap_chain_extent;
-  vkCmdSetScissor(vulkan_ctx->command_buffer, 0, 1, &scissor);
+  vkCmdSetScissor(vulkan_ctx->command_buffers[f], 0, 1, &scissor);
 
   // draw!
 
-  vkCmdDraw(vulkan_ctx->command_buffer, 3, 1, 0, 0);
+  vkCmdDraw(vulkan_ctx->command_buffers[f], 3, 1, 0, 0);
 
-  vkCmdEndRenderPass(vulkan_ctx->command_buffer);
+  vkCmdEndRenderPass(vulkan_ctx->command_buffers[f]);
 
-  VK_CHECK(vkEndCommandBuffer(vulkan_ctx->command_buffer), "Failed to record command buffer\n");
+  VK_CHECK(vkEndCommandBuffer(vulkan_ctx->command_buffers[f]), "Failed to record command buffer\n");
 }
 
 void aso_create_sync_objects(aso_vulkan_ctx *vulkan_ctx) {
   assert(vulkan_ctx != NULL);
+
+  vulkan_ctx->image_available_semaphores = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkSemaphore, ASO_VULKAN_FRAMES_IN_FLIGHT);
+  vulkan_ctx->render_finished_semaphores = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkSemaphore, ASO_VULKAN_FRAMES_IN_FLIGHT);
+  vulkan_ctx->in_flight_fences = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkFence, ASO_VULKAN_FRAMES_IN_FLIGHT);
+
 
   VkSemaphoreCreateInfo semaphore_info = {};
   semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -834,9 +845,11 @@ void aso_create_sync_objects(aso_vulkan_ctx *vulkan_ctx) {
   fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so we dont block forever on first frame
 
-  VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->image_available_semaphore), "Failed to create semaphore\n");
-  VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->render_finished_semaphore), "Failed to create semaphore\n");
-  VK_CHECK(vkCreateFence(vulkan_ctx->device, &fence_info, nullptr, &vulkan_ctx->in_flight_fence), "Failed to create fence\n");
+  for (size_t i = 0; i < ASO_VULKAN_FRAMES_IN_FLIGHT; i++) {
+    VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->image_available_semaphores[i]), "Failed to create semaphore\n");
+    VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->render_finished_semaphores[i]), "Failed to create semaphore\n");
+    VK_CHECK(vkCreateFence(vulkan_ctx->device, &fence_info, nullptr, &vulkan_ctx->in_flight_fences[i]), "Failed to create fence\n");
+  }
 }
 
 // REGION: DRAW FRAME
@@ -844,38 +857,49 @@ void aso_create_sync_objects(aso_vulkan_ctx *vulkan_ctx) {
 void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
   assert(vulkan_ctx != NULL);
 
+  u32 f = vulkan_ctx->frame;
+  aso_log("drawing frame %d\n", f);
+
   aso_log("waiting for fence..\n");
 
-  vkWaitForFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fence, VK_TRUE, UINT64_MAX);
-  vkResetFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fence);
+  vkWaitForFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fences[f], VK_TRUE, UINT64_MAX);
   aso_log("acquiring image\n");
 
   u32 image_index;
-  vkAcquireNextImageKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, UINT64_MAX, vulkan_ctx->image_available_semaphore, VK_NULL_HANDLE, &image_index);
-  aso_log("resetting cmd buffer\n");
+  VkResult image_acquire_result = vkAcquireNextImageKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, UINT64_MAX, vulkan_ctx->image_available_semaphores[f], VK_NULL_HANDLE, &image_index);
+  if (image_acquire_result == VK_ERROR_OUT_OF_DATE_KHR) {
+    aso_log("Swap chain image out of date\n");
+    return;
+  } else if (image_acquire_result != VK_SUCCESS && image_acquire_result != VK_SUBOPTIMAL_KHR) {
+    aso_log("Failed to acquire swap chain image\n");
+    return;
+  }
 
-  vkResetCommandBuffer(vulkan_ctx->command_buffer, 0);
+  vkResetFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fences[f]);
+  
+  aso_log("resetting cmd buffer\n");
+  vkResetCommandBuffer(vulkan_ctx->command_buffers[f], 0);
   aso_log("recording cmd buffer\n");
   aso_record_command_buffer(vulkan_ctx, image_index);
 
   VkSubmitInfo submit_info = {};
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkSemaphore wait_semaphores[] = {vulkan_ctx->image_available_semaphore};
+  VkSemaphore wait_semaphores[] = {vulkan_ctx->image_available_semaphores[f]};
   VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   submit_info.waitSemaphoreCount = 1;
   submit_info.pWaitSemaphores = wait_semaphores;
   submit_info.pWaitDstStageMask = wait_stages;
 
   submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &vulkan_ctx->command_buffer;
+  submit_info.pCommandBuffers = &vulkan_ctx->command_buffers[f];
 
-  VkSemaphore signal_semaphores[] = {vulkan_ctx->render_finished_semaphore};
+  VkSemaphore signal_semaphores[] = {vulkan_ctx->render_finished_semaphores[f]};
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = signal_semaphores;
   aso_log("submitting to graphics queue\n");
 
-  VK_CHECK(vkQueueSubmit(vulkan_ctx->graphics_queue, 1, &submit_info, vulkan_ctx->in_flight_fence), "Failed to submit draw command buffer\n");
+  VK_CHECK(vkQueueSubmit(vulkan_ctx->graphics_queue, 1, &submit_info, vulkan_ctx->in_flight_fences[f]), "Failed to submit draw command buffer\n");
 
   VkPresentInfoKHR present_info = {};
   present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -892,6 +916,8 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
 
   vkQueuePresentKHR(vulkan_ctx->presentation_queue, &present_info);
   aso_log("done\n\n");
+
+  vulkan_ctx->frame = (f + 1) % ASO_VULKAN_FRAMES_IN_FLIGHT;
 }
 
 // REGION: CLEANUP
@@ -899,10 +925,13 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
 
-  vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->image_available_semaphore, nullptr);
-  vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->render_finished_semaphore, nullptr);
-  vkDestroyFence(vulkan_ctx->device, vulkan_ctx->in_flight_fence, nullptr);
+  for (size_t i = 0; i < ASO_VULKAN_FRAMES_IN_FLIGHT; i++) {
+    vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->image_available_semaphores[i], nullptr);
+    vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->render_finished_semaphores[i], nullptr);
+    vkDestroyFence(vulkan_ctx->device, vulkan_ctx->in_flight_fences[i], nullptr);
+  }
 
+  // Destroying command bool will implicitly free command buffers
   vkDestroyCommandPool(vulkan_ctx->device, vulkan_ctx->command_pool, nullptr);
 
   // framebuffers

@@ -15,10 +15,12 @@ static bool aso_enable_vulkan_validation_layers = false;
 
 #define ASO_VULKAN_VALIDATION_LAYER_COUNT 1
 #define ASO_VULKAN_DEVICE_EXTENSION_COUNT 1
+#define ASO_VULKAN_FRAMES_IN_FLIGHT 2
 
 // vulkan context
 struct aso_vulkan_ctx {
   aso_arena *arena;
+  u32 frame;
   // these are pointer sized handles, Vulkan manages the lifetime
   VkInstance instance;
   VkPhysicalDevice physical_device;
@@ -39,10 +41,10 @@ struct aso_vulkan_ctx {
   VkFramebuffer *swap_chain_framebuffers;
   u32 swap_chain_framebuffers_count;
   VkCommandPool command_pool;
-  VkCommandBuffer command_buffer;
-  VkSemaphore image_available_semaphore;
-  VkSemaphore render_finished_semaphore;
-  VkFence in_flight_fence;
+  VkCommandBuffer *command_buffers;
+  VkSemaphore *image_available_semaphores;
+  VkSemaphore *render_finished_semaphores;
+  VkFence *in_flight_fences;
 };
 
 struct aso_vulkan_queue_family_indices {
@@ -88,7 +90,7 @@ void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx);
 void aso_create_framebuffers(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx);
-void aso_create_command_buffer(aso_vulkan_ctx *vulkan_ctx);
+void aso_create_command_buffers(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index);
 
