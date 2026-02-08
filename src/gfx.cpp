@@ -956,8 +956,8 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
   aso_log("submitting to present queue\n");
 
   VkResult present_result = vkQueuePresentKHR(vulkan_ctx->presentation_queue, &present_info);
-  if (image_acquire_result == VK_ERROR_OUT_OF_DATE_KHR ||
-      image_acquire_result == VK_SUBOPTIMAL_KHR ||
+  if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
+      present_result == VK_SUBOPTIMAL_KHR ||
       vulkan_ctx->window_resized) {
     aso_log("Swap chain image out of date\n");
     vulkan_ctx->window_resized = false;
