@@ -6,6 +6,7 @@
 enum aso_cmd_type {
   CMD_NONE,
   CMD_QUIT,
+  CMD_WIN_RESIZE,
 };
 
 struct aso_cmd {

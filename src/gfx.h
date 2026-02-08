@@ -21,6 +21,7 @@ static bool aso_enable_vulkan_validation_layers = false;
 struct aso_vulkan_ctx {
   aso_arena *arena;
   u32 frame;
+  bool window_resized;
   // these are pointer sized handles, Vulkan manages the lifetime
   VkInstance instance;
   VkPhysicalDevice physical_device;
@@ -81,6 +82,8 @@ void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_create_swap_chain(aso_vulkan_ctx *vulkan_ctx);
 VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities);
+void aso_recreate_swap_chain(aso_vulkan_ctx *vulkan_ctx);
+void aso_cleanup_swap_chain(aso_vulkan_ctx *vulkan_ctx);
 
 void aso_create_image_views(aso_vulkan_ctx *vulkan_ctx);
 void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx);

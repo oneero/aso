@@ -3,6 +3,7 @@
 #include "gfx.h"
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_vulkan.h>
 
@@ -55,4 +56,8 @@ char const * const * aso_get_window_vulkan_extensions(u32 *count) {
 
 bool aso_create_vulkan_surface(SDL_Window *window, aso_vulkan_ctx *vulkan_ctx) {
   return SDL_Vulkan_CreateSurface(window, vulkan_ctx->instance, NULL, &vulkan_ctx->surface);
+}
+
+void aso_wait_for_sdl_event(SDL_Event *event) {
+  SDL_WaitEvent(event);
 }

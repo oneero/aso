@@ -475,6 +475,42 @@ VkExtent2D aso_select_swap_extent(VkSurfaceCapabilitiesKHR *capabilities) {
   }
 }
 
+void aso_recreate_swap_chain(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  // check if the window is minimized
+  int width, heigth;
+  aso_get_window_size(&g_ctx->window, &width, &heigth);
+  while (width == 0 || heigth == 0) {
+    aso_wait_for_sdl_event(NULL);
+    aso_get_window_size(&g_ctx->window, &width, &heigth);
+  }
+
+  vkDeviceWaitIdle(vulkan_ctx->device);
+
+  aso_cleanup_swap_chain(vulkan_ctx);
+
+  aso_create_swap_chain(vulkan_ctx);
+  aso_create_image_views(vulkan_ctx);
+  aso_create_framebuffers(vulkan_ctx);
+}
+
+void aso_cleanup_swap_chain(aso_vulkan_ctx *vulkan_ctx) {
+  assert(vulkan_ctx != NULL);
+
+  // framebuffers
+  for (size_t i = 0; i < vulkan_ctx->swap_chain_framebuffers_count; i++) {
+    vkDestroyFramebuffer(vulkan_ctx->device, vulkan_ctx->swap_chain_framebuffers[i], nullptr);
+  }
+
+  // swap chain image views
+  for (size_t i = 0; i < vulkan_ctx->swap_chain_image_views_count; i++) {
+    vkDestroyImageView(vulkan_ctx->device, vulkan_ctx->swap_chain_image_views[i], nullptr);
+  }
+
+  vkDestroySwapchainKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, nullptr);
+}
+
 // REGION: IMAGE VIEWS
 
 void aso_create_image_views(aso_vulkan_ctx *vulkan_ctx) {
@@ -867,12 +903,15 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
 
   u32 image_index;
   VkResult image_acquire_result = vkAcquireNextImageKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, UINT64_MAX, vulkan_ctx->image_available_semaphores[f], VK_NULL_HANDLE, &image_index);
-  if (image_acquire_result == VK_ERROR_OUT_OF_DATE_KHR) {
+  if (image_acquire_result == VK_ERROR_OUT_OF_DATE_KHR ||
+      image_acquire_result == VK_SUBOPTIMAL_KHR ||
+      vulkan_ctx->window_resized) {
     aso_log("Swap chain image out of date\n");
+    vulkan_ctx->window_resized = false;
+    aso_recreate_swap_chain(vulkan_ctx);
     return;
-  } else if (image_acquire_result != VK_SUCCESS && image_acquire_result != VK_SUBOPTIMAL_KHR) {
+  } else if (image_acquire_result != VK_SUCCESS) {
     aso_log("Failed to acquire swap chain image\n");
-    return;
   }
 
   vkResetFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fences[f]);
@@ -914,7 +953,16 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
   present_info.pResults = nullptr; // optional
   aso_log("submitting to present queue\n");
 
-  vkQueuePresentKHR(vulkan_ctx->presentation_queue, &present_info);
+  VkResult present_result = vkQueuePresentKHR(vulkan_ctx->presentation_queue, &present_info);
+  if (image_acquire_result == VK_ERROR_OUT_OF_DATE_KHR ||
+      image_acquire_result == VK_SUBOPTIMAL_KHR ||
+      vulkan_ctx->window_resized) {
+    aso_log("Swap chain image out of date\n");
+    vulkan_ctx->window_resized = false;
+    aso_recreate_swap_chain(vulkan_ctx);
+  } else if (present_result != VK_SUCCESS) {
+    aso_log("Failed to acquire swap chain image\n");
+  }
   aso_log("done\n\n");
 
   vulkan_ctx->frame = (f + 1) % ASO_VULKAN_FRAMES_IN_FLIGHT;
@@ -925,30 +973,21 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
 void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
   vkDeviceWaitIdle(vulkan_ctx->device);
 
+  aso_cleanup_swap_chain(vulkan_ctx);
+
+  vkDestroyPipeline(vulkan_ctx->device, vulkan_ctx->graphics_pipeline, nullptr);
+  vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, nullptr);
+  vkDestroyRenderPass(vulkan_ctx->device, vulkan_ctx->render_pass, nullptr);
+  
   for (size_t i = 0; i < ASO_VULKAN_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->image_available_semaphores[i], nullptr);
     vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->render_finished_semaphores[i], nullptr);
     vkDestroyFence(vulkan_ctx->device, vulkan_ctx->in_flight_fences[i], nullptr);
   }
 
-  // Destroying command bool will implicitly free command buffers
+  // NOTE: Destroying command bool will implicitly free command buffers
   vkDestroyCommandPool(vulkan_ctx->device, vulkan_ctx->command_pool, nullptr);
 
-  // framebuffers
-  for (size_t i = 0; i < vulkan_ctx->swap_chain_framebuffers_count; i++) {
-    vkDestroyFramebuffer(vulkan_ctx->device, vulkan_ctx->swap_chain_framebuffers[i], nullptr);
-  }
-
-  vkDestroyPipeline(vulkan_ctx->device, vulkan_ctx->graphics_pipeline, nullptr);
-  vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, nullptr);
-  vkDestroyRenderPass(vulkan_ctx->device, vulkan_ctx->render_pass, nullptr);
-
-  // swap chain image views
-  for (size_t i = 0; i < vulkan_ctx->swap_chain_image_views_count; i++) {
-    vkDestroyImageView(vulkan_ctx->device, vulkan_ctx->swap_chain_image_views[i], nullptr);
-  }
-
-  vkDestroySwapchainKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, nullptr);
   vkDestroyDevice(vulkan_ctx->device, nullptr);
   vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, nullptr);
   vkDestroyInstance(vulkan_ctx->instance, nullptr);

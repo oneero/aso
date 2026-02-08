@@ -32,7 +32,7 @@ void aso_run(void) {
   g_ctx->running = 1;
 
   int frame = 0;
-  int max_frames = 100000;
+  int max_frames = 10000;
 
   // main loop
   while (g_ctx->running > 0 && frame < max_frames) {
@@ -60,6 +60,8 @@ void aso_process_commands(aso_cmd_buffer *cmds) {
     case CMD_QUIT:
       g_ctx->running = 0;
       break;
+    case CMD_WIN_RESIZE:
+      g_ctx->vulkan.window_resized = true;
     default:
       break;
     }

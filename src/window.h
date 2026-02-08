@@ -6,6 +6,7 @@
 #include "core.h"
 #include "gfx.h"
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
 
 struct aso_window {
   SDL_Window *handle;
@@ -20,5 +21,7 @@ void aso_get_window_size(aso_window *window, int *width, int *height);
 
 char const * const * aso_get_window_vulkan_extensions(u32 *count);
 bool aso_create_vulkan_surface(SDL_Window *window, aso_vulkan_ctx *vulkan_ctx);
+
+void aso_wait_for_sdl_event(SDL_Event *event);
 
 #endif // ASO_WINDOW_H
