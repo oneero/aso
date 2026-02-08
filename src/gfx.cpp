@@ -157,8 +157,10 @@ bool aso_check_vulkan_validation_layer_support(VkLayerProperties *available_laye
     bool layer_found = false;
 
     for (int j = 0; j < count; j++) {
-      layer_found = true;
-      break;
+      if (strcmp(aso_vulkan_validation_layers[i], available_layers[j].layerName) == 0) {
+        layer_found = true;
+        break;
+      }
     }
 
     if (!layer_found) {
