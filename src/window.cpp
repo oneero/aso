@@ -54,7 +54,7 @@ char const * const * aso_get_window_vulkan_extensions(u32 *count) {
   return SDL_Vulkan_GetInstanceExtensions(count);
 }
 
-bool aso_create_vulkan_surface(SDL_Window *window, aso_vulkan_ctx *vulkan_ctx) {
+bool aso_create_vulkan_surface(SDL_Window *window, aso_vk_ctx *vulkan_ctx) {
   return SDL_Vulkan_CreateSurface(window, vulkan_ctx->instance, NULL, &vulkan_ctx->surface);
 }
 

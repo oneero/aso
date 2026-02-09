@@ -1,0 +1,21 @@
+# .clang-format
+BasedOnStyle: LLVM
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ColumnLimit: 0
+BreakBeforeBraces: Mozilla 
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+PointerAlignment: Right
+SortIncludes: true
+IndentCaseLabels: true
+SpaceAfterCStyleCast: true
+AlignConsecutiveDeclarations:
+  Enabled:                    true
+  AcrossEmptyLines:           true
+  AcrossComments:             true
+  AlignCompound:              true
+  AlignFunctionDeclarations:  true
+  AlignFunctionPointers:      true
+  PadOperators:               true

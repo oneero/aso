@@ -9,7 +9,7 @@
 // state context
 struct aso_ctx {
   aso_window window;
-  aso_vulkan_ctx vulkan;
+  aso_vk_ctx vulkan;
   aso_cmd_buffer cmds;
   int running;
   aso_arena *scratch;  

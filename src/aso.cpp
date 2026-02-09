@@ -20,7 +20,7 @@ void aso_init(aso_ctx *ctx) {
   aso_window_init(&ctx->window);
 
   // init vulkan
-  aso_init_vulkan(&ctx->vulkan);
+  aso_vk_init(&ctx->vulkan);
 
   // show window
   aso_window_show(&ctx->window);
@@ -38,7 +38,7 @@ void aso_run(void) {
   while (g_ctx->running > 0 && frame < max_frames) {
     aso_input_poll(&g_ctx->cmds);
     aso_process_commands(&g_ctx->cmds);
-    aso_draw_frame(&g_ctx->vulkan);
+    aso_vk_draw_frame(&g_ctx->vulkan);
     frame++;
   }
 }
@@ -46,7 +46,7 @@ void aso_run(void) {
 void aso_cleanup(void) {
   aso_log("aso_cleanup\n");
 
-  aso_cleanup_vulkan(&g_ctx->vulkan);
+  aso_vk_cleanup(&g_ctx->vulkan);
 
   aso_window_cleanup(&g_ctx->window);
 
