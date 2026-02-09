@@ -190,7 +190,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
   aso_log("Finding suitable GPU..\n");
   
   u32 device_count = 0;
-  vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, nullptr);
+  vkEnumeratePhysicalDevices(vulkan_ctx->instance, &device_count, NULL);
   if (device_count == 0) {
     aso_log("Failed to find any devices supporting Vulkan\n");
     exit(1);
@@ -215,7 +215,7 @@ void aso_select_physical_device(aso_vulkan_ctx *vulkan_ctx) {
 
 bool aso_is_device_suitable(aso_vulkan_ctx *vulkan_ctx, VkPhysicalDevice physical_device) {
   assert(vulkan_ctx != NULL);
-  assert(physical_device != NULL);
+  assert(physical_device != VK_NULL_HANDLE);
 
   VkPhysicalDeviceProperties device_properties;
   VkPhysicalDeviceFeatures device_features;
@@ -244,7 +244,7 @@ aso_vulkan_queue_family_indices aso_get_vulkan_family_indices(aso_vulkan_ctx *vu
   aso_vulkan_queue_family_indices indices = {};
 
   u32 queue_family_count = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
   VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkQueueFamilyProperties, queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
@@ -273,10 +273,10 @@ bool aso_check_device_extension_support(aso_arena *arena, VkPhysicalDevice physi
   assert(physical_device != NULL);
 
   u32 extension_count;
-  vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, nullptr);
+  vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, NULL);
 
   VkExtensionProperties *available_extensions = ASO_ARENA_ALLOC_ARRAY(arena, VkExtensionProperties, extension_count);
-  vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, available_extensions);
+  vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, available_extensions);
 
   // check each required extension is supported
   for (int i = 0; i < ASO_VULKAN_DEVICE_EXTENSION_COUNT; i++) {
@@ -368,7 +368,7 @@ void aso_create_vulkan_logical_device(aso_vulkan_ctx *vulkan_ctx) {
     device_create_info.enabledLayerCount = 0;
   }
 
-  VK_CHECK(vkCreateDevice(vulkan_ctx->physical_device, &device_create_info, nullptr, &vulkan_ctx->device), "Failed to create logical device\n");
+  VK_CHECK(vkCreateDevice(vulkan_ctx->physical_device, &device_create_info, NULL, &vulkan_ctx->device), "Failed to create logical device\n");
 
   vkGetDeviceQueue(vulkan_ctx->device, indices.graphics_family, 0, &vulkan_ctx->graphics_queue);
   vkGetDeviceQueue(vulkan_ctx->device, indices.present_family, 0, &vulkan_ctx->presentation_queue);
@@ -439,10 +439,10 @@ void aso_create_swap_chain(aso_vulkan_ctx *vulkan_ctx) {
   create_info.clipped = VK_TRUE;
   create_info.oldSwapchain = VK_NULL_HANDLE;
 
-  VK_CHECK(vkCreateSwapchainKHR(vulkan_ctx->device, &create_info, nullptr, &vulkan_ctx->swap_chain), "Failed to create swap chain\n");
+  VK_CHECK(vkCreateSwapchainKHR(vulkan_ctx->device, &create_info, NULL, &vulkan_ctx->swap_chain), "Failed to create swap chain\n");
 
   // retrieve swap chain image handles
-  vkGetSwapchainImagesKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, &vulkan_ctx->swap_chain_images_count, nullptr);
+  vkGetSwapchainImagesKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, &vulkan_ctx->swap_chain_images_count, NULL);
   vulkan_ctx->swap_chain_images = ASO_ARENA_ALLOC_ARRAY(vulkan_ctx->arena, VkImage, vulkan_ctx->swap_chain_images_count);
   vkGetSwapchainImagesKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, &vulkan_ctx->swap_chain_images_count, vulkan_ctx->swap_chain_images);
 
@@ -497,15 +497,15 @@ void aso_cleanup_swap_chain(aso_vulkan_ctx *vulkan_ctx) {
 
   // framebuffers
   for (size_t i = 0; i < vulkan_ctx->swap_chain_framebuffers_count; i++) {
-    vkDestroyFramebuffer(vulkan_ctx->device, vulkan_ctx->swap_chain_framebuffers[i], nullptr);
+    vkDestroyFramebuffer(vulkan_ctx->device, vulkan_ctx->swap_chain_framebuffers[i], NULL);
   }
 
   // swap chain image views
   for (size_t i = 0; i < vulkan_ctx->swap_chain_image_views_count; i++) {
-    vkDestroyImageView(vulkan_ctx->device, vulkan_ctx->swap_chain_image_views[i], nullptr);
+    vkDestroyImageView(vulkan_ctx->device, vulkan_ctx->swap_chain_image_views[i], NULL);
   }
 
-  vkDestroySwapchainKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, nullptr);
+  vkDestroySwapchainKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, NULL);
 }
 
 // REGION: IMAGE VIEWS
@@ -530,7 +530,7 @@ void aso_create_image_views(aso_vulkan_ctx *vulkan_ctx) {
     create_info.subresourceRange.baseArrayLayer = 0;
     create_info.subresourceRange.layerCount = 1;
 
-    VK_CHECK(vkCreateImageView(vulkan_ctx->device, &create_info, nullptr, &vulkan_ctx->swap_chain_image_views[i]), "Failed to create image view");
+    VK_CHECK(vkCreateImageView(vulkan_ctx->device, &create_info, NULL, &vulkan_ctx->swap_chain_image_views[i]), "Failed to create image view");
   }
 }
 
@@ -561,14 +561,14 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
   vert_shader_stage_info.module = vert_shader_module;
   vert_shader_stage_info.pName = "main";
-  vert_shader_stage_info.pSpecializationInfo = nullptr; // no constants
+  vert_shader_stage_info.pSpecializationInfo = NULL; // no constants
 
   VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
   frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
   frag_shader_stage_info.module = frag_shader_module;
   frag_shader_stage_info.pName = "main";
-  frag_shader_stage_info.pSpecializationInfo = nullptr; // no constants
+  frag_shader_stage_info.pSpecializationInfo = NULL; // no constants
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader_stage_info, frag_shader_stage_info};
 
@@ -578,9 +578,9 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
   vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertex_input_info.vertexBindingDescriptionCount = 0;
-  vertex_input_info.pVertexAttributeDescriptions = nullptr; // optional
+  vertex_input_info.pVertexAttributeDescriptions = NULL; // optional
   vertex_input_info.vertexAttributeDescriptionCount = 0;
-  vertex_input_info.pVertexAttributeDescriptions = nullptr; // optional
+  vertex_input_info.pVertexAttributeDescriptions = NULL; // optional
 
   VkPipelineInputAssemblyStateCreateInfo input_assembly = {};
   input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -621,7 +621,7 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   multisampling.sampleShadingEnable = VK_FALSE;
   multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
   multisampling.minSampleShading = 1.0f; // optional
-  multisampling.pSampleMask = nullptr; // optional
+  multisampling.pSampleMask = NULL; // optional
   multisampling.alphaToCoverageEnable = VK_FALSE; // optional
   multisampling.alphaToOneEnable = VK_FALSE; // optional
 
@@ -656,11 +656,11 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   VkPipelineLayoutCreateInfo pipeline_layout_info = {};
   pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipeline_layout_info.setLayoutCount = 0; // optional
-  pipeline_layout_info.pSetLayouts = nullptr; // optional
+  pipeline_layout_info.pSetLayouts = NULL; // optional
   pipeline_layout_info.pushConstantRangeCount = 0; // optional
-  pipeline_layout_info.pPushConstantRanges = nullptr; // optional
+  pipeline_layout_info.pPushConstantRanges = NULL; // optional
 
-  VK_CHECK(vkCreatePipelineLayout(vulkan_ctx->device, &pipeline_layout_info, nullptr, &vulkan_ctx->pipeline_layout), "Failed to create pipeline layout\n");
+  VK_CHECK(vkCreatePipelineLayout(vulkan_ctx->device, &pipeline_layout_info, NULL, &vulkan_ctx->pipeline_layout), "Failed to create pipeline layout\n");
 
   VkGraphicsPipelineCreateInfo pipeline_info = {};
   pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -672,7 +672,7 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   pipeline_info.pViewportState = &viewport_state;
   pipeline_info.pRasterizationState = &rasterizer;
   pipeline_info.pMultisampleState = &multisampling;
-  pipeline_info.pDepthStencilState = nullptr; // optional
+  pipeline_info.pDepthStencilState = NULL; // optional
   pipeline_info.pColorBlendState = &color_blending;
   pipeline_info.pDynamicState = &dynamic_state;
 
@@ -684,10 +684,10 @@ void aso_create_graphics_pipeline(aso_vulkan_ctx *vulkan_ctx) {
   pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // optional
   pipeline_info.basePipelineIndex = -1; // optional
  
-  VK_CHECK(vkCreateGraphicsPipelines(vulkan_ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &vulkan_ctx->graphics_pipeline), "Failed to create graphics pipeline\n");
+  VK_CHECK(vkCreateGraphicsPipelines(vulkan_ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &vulkan_ctx->graphics_pipeline), "Failed to create graphics pipeline\n");
 
-  vkDestroyShaderModule(vulkan_ctx->device, frag_shader_module, nullptr);
-  vkDestroyShaderModule(vulkan_ctx->device, vert_shader_module, nullptr);
+  vkDestroyShaderModule(vulkan_ctx->device, frag_shader_module, NULL);
+  vkDestroyShaderModule(vulkan_ctx->device, vert_shader_module, NULL);
 }
 
 VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long code_size) {
@@ -696,7 +696,7 @@ VkShaderModule aso_create_shader_module(VkDevice device, u8 *shader_code, long c
   create_info.codeSize = code_size;
   create_info.pCode = (const u32 *)shader_code;
   VkShaderModule module;
-  VK_CHECK(vkCreateShaderModule(device, &create_info, nullptr, &module), "Failed to create shader module\n");
+  VK_CHECK(vkCreateShaderModule(device, &create_info, NULL, &module), "Failed to create shader module\n");
   return module;
 }
 
@@ -744,7 +744,7 @@ void aso_create_render_pass(aso_vulkan_ctx *vulkan_ctx) {
   render_pass_info.dependencyCount = 1;
   render_pass_info.pDependencies = &dependency;
 
-  VK_CHECK(vkCreateRenderPass(vulkan_ctx->device, &render_pass_info, nullptr, &vulkan_ctx->render_pass), "Failed to create render pass\n");
+  VK_CHECK(vkCreateRenderPass(vulkan_ctx->device, &render_pass_info, NULL, &vulkan_ctx->render_pass), "Failed to create render pass\n");
 }
 
 // REGION: FRAMEBUFFERS
@@ -770,7 +770,7 @@ void aso_create_framebuffers(aso_vulkan_ctx *vulkan_ctx) {
     framebuffer_info.height = vulkan_ctx->swap_chain_extent.height;
     framebuffer_info.layers = 1;
 
-    VK_CHECK(vkCreateFramebuffer(vulkan_ctx->device, &framebuffer_info, nullptr, &vulkan_ctx->swap_chain_framebuffers[i]), "Failed to create framebuffer\n");
+    VK_CHECK(vkCreateFramebuffer(vulkan_ctx->device, &framebuffer_info, NULL, &vulkan_ctx->swap_chain_framebuffers[i]), "Failed to create framebuffer\n");
   }
 }
 
@@ -786,7 +786,7 @@ void aso_create_command_pool(aso_vulkan_ctx *vulkan_ctx) {
   pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // reset command buffers every frame
   pool_info.queueFamilyIndex = queue_family_indices.graphics_family;
 
-  VK_CHECK(vkCreateCommandPool(vulkan_ctx->device, &pool_info, nullptr, &vulkan_ctx->command_pool), "Failed to create command pool\n");
+  VK_CHECK(vkCreateCommandPool(vulkan_ctx->device, &pool_info, NULL, &vulkan_ctx->command_pool), "Failed to create command pool\n");
 }
 
 // REGION: COMMAND BUFFER
@@ -815,7 +815,7 @@ void aso_record_command_buffer(aso_vulkan_ctx *vulkan_ctx, u32 image_index) {
   VkCommandBufferBeginInfo begin_info = {};
   begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   begin_info.flags = 0; // optional
-  begin_info.pInheritanceInfo = nullptr; // optional
+  begin_info.pInheritanceInfo = NULL; // optional
 
   VK_CHECK(vkBeginCommandBuffer(vulkan_ctx->command_buffers[f], &begin_info), "Failed to begin recording command buffer\n");
 
@@ -879,9 +879,9 @@ void aso_create_sync_objects(aso_vulkan_ctx *vulkan_ctx) {
   fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so we dont block forever on first frame
 
   for (size_t i = 0; i < ASO_VULKAN_FRAMES_IN_FLIGHT; i++) {
-    VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->image_available_semaphores[i]), "Failed to create semaphore\n");
-    VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, nullptr, &vulkan_ctx->render_finished_semaphores[i]), "Failed to create semaphore\n");
-    VK_CHECK(vkCreateFence(vulkan_ctx->device, &fence_info, nullptr, &vulkan_ctx->in_flight_fences[i]), "Failed to create fence\n");
+    VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, NULL, &vulkan_ctx->image_available_semaphores[i]), "Failed to create semaphore\n");
+    VK_CHECK(vkCreateSemaphore(vulkan_ctx->device, &semaphore_info, NULL, &vulkan_ctx->render_finished_semaphores[i]), "Failed to create semaphore\n");
+    VK_CHECK(vkCreateFence(vulkan_ctx->device, &fence_info, NULL, &vulkan_ctx->in_flight_fences[i]), "Failed to create fence\n");
   }
 }
 
@@ -891,31 +891,22 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
   assert(vulkan_ctx != NULL);
 
   u32 f = vulkan_ctx->frame;
-  aso_log("drawing frame %d\n", f);
-
-  aso_log("waiting for fence..\n");
-
   vkWaitForFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fences[f], VK_TRUE, UINT64_MAX);
-  aso_log("acquiring image\n");
 
   u32 image_index;
   VkResult image_acquire_result = vkAcquireNextImageKHR(vulkan_ctx->device, vulkan_ctx->swap_chain, UINT64_MAX, vulkan_ctx->image_available_semaphores[f], VK_NULL_HANDLE, &image_index);
   if (image_acquire_result == VK_ERROR_OUT_OF_DATE_KHR ||
       image_acquire_result == VK_SUBOPTIMAL_KHR ||
       vulkan_ctx->window_resized) {
-    aso_log("Swap chain image out of date\n");
     vulkan_ctx->window_resized = false;
     aso_recreate_swap_chain(vulkan_ctx);
     return;
   } else if (image_acquire_result != VK_SUCCESS) {
-    aso_log("Failed to acquire swap chain image\n");
   }
 
   vkResetFences(vulkan_ctx->device, 1, &vulkan_ctx->in_flight_fences[f]);
   
-  aso_log("resetting cmd buffer\n");
   vkResetCommandBuffer(vulkan_ctx->command_buffers[f], 0);
-  aso_log("recording cmd buffer\n");
   aso_record_command_buffer(vulkan_ctx, image_index);
 
   VkSubmitInfo submit_info = {};
@@ -933,7 +924,6 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
   VkSemaphore signal_semaphores[] = {vulkan_ctx->render_finished_semaphores[f]};
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = signal_semaphores;
-  aso_log("submitting to graphics queue\n");
 
   VK_CHECK(vkQueueSubmit(vulkan_ctx->graphics_queue, 1, &submit_info, vulkan_ctx->in_flight_fences[f]), "Failed to submit draw command buffer\n");
 
@@ -947,8 +937,7 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
   present_info.pSwapchains = swap_chains;
   present_info.pImageIndices = &image_index;
 
-  present_info.pResults = nullptr; // optional
-  aso_log("submitting to present queue\n");
+  present_info.pResults = NULL; // optional
 
   VkResult present_result = vkQueuePresentKHR(vulkan_ctx->presentation_queue, &present_info);
   if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
@@ -960,7 +949,6 @@ void aso_draw_frame(aso_vulkan_ctx *vulkan_ctx) {
   } else if (present_result != VK_SUCCESS) {
     aso_log("Failed to acquire swap chain image\n");
   }
-  aso_log("done\n\n");
 
   vulkan_ctx->frame = (f + 1) % ASO_VULKAN_FRAMES_IN_FLIGHT;
 }
@@ -972,22 +960,22 @@ void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx) {
 
   aso_cleanup_swap_chain(vulkan_ctx);
 
-  vkDestroyPipeline(vulkan_ctx->device, vulkan_ctx->graphics_pipeline, nullptr);
-  vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, nullptr);
-  vkDestroyRenderPass(vulkan_ctx->device, vulkan_ctx->render_pass, nullptr);
+  vkDestroyPipeline(vulkan_ctx->device, vulkan_ctx->graphics_pipeline, NULL);
+  vkDestroyPipelineLayout(vulkan_ctx->device, vulkan_ctx->pipeline_layout, NULL);
+  vkDestroyRenderPass(vulkan_ctx->device, vulkan_ctx->render_pass, NULL);
   
   for (size_t i = 0; i < ASO_VULKAN_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->image_available_semaphores[i], nullptr);
-    vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->render_finished_semaphores[i], nullptr);
-    vkDestroyFence(vulkan_ctx->device, vulkan_ctx->in_flight_fences[i], nullptr);
+    vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->image_available_semaphores[i], NULL);
+    vkDestroySemaphore(vulkan_ctx->device, vulkan_ctx->render_finished_semaphores[i], NULL);
+    vkDestroyFence(vulkan_ctx->device, vulkan_ctx->in_flight_fences[i], NULL);
   }
 
   // NOTE: Destroying command bool will implicitly free command buffers
-  vkDestroyCommandPool(vulkan_ctx->device, vulkan_ctx->command_pool, nullptr);
+  vkDestroyCommandPool(vulkan_ctx->device, vulkan_ctx->command_pool, NULL);
 
-  vkDestroyDevice(vulkan_ctx->device, nullptr);
-  vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, nullptr);
-  vkDestroyInstance(vulkan_ctx->instance, nullptr);
+  vkDestroyDevice(vulkan_ctx->device, NULL);
+  vkDestroySurfaceKHR(vulkan_ctx->instance, vulkan_ctx->surface, NULL);
+  vkDestroyInstance(vulkan_ctx->instance, NULL);
 
   aso_arena_destroy(vulkan_ctx->arena);
   // NOTE: physical_device and queues are cleaned up implicitly

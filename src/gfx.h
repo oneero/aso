@@ -114,7 +114,7 @@ void aso_cleanup_vulkan(aso_vulkan_ctx *vulkan_ctx);
     if (result != expected) { \
       aso_log("VULKAN ERROR\n" \
               " %s\n" \
-              " %s:%d: %s != %s (got %s)\n", \
+              " %s:%d: %s != %s (got %d)\n", \
               msg, __FILE__, __LINE__, #call, #expected, result); \
       exit(1); \
     } \
