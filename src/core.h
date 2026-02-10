@@ -26,6 +26,8 @@ typedef float f32;
 #define SIGN(x) ((x) > 0 ? 1 : ((x) < 0 ? -1 : 0))
 #define SQUARE(x) ((x) * (x))
 
+// TODO: add proper logging and assertion
+
 // logging function
 // currently simply wraps printf
 static void aso_log(const char *fmt, ...) {

@@ -22,20 +22,24 @@ const char* aso_vulkan_device_extensions[ASO_VK_DEVICE_EXTENSION_COUNT] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-void aso_vk_init(aso_vk_ctx *ctx) {
-  ctx->arena = aso_arena_create();
-
-  aso_vk_create_instance(ctx);
-  if (!aso_create_vulkan_surface(g_ctx->window.handle, ctx)) {
+void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
+  size_t scratch_mark = scratch->offset;
+  aso_vk_create_instance(scratch, ctx);
+  scratch->offset = scratch_mark;
+  if (!aso_create_vulkan_surface(g_ctx->window.handle, ctx->instance, &ctx->surface)) {
     aso_log("Failed to create SDL3 Vulkan surface\n");
     exit(1);
   }
-  aso_vk_select_physical_device(ctx);
+  aso_vk_select_physical_device(scratch, ctx);
+  scratch->offset = scratch_mark;
+  ctx->queue_families = aso_vk_get_queue_families(scratch, ctx->physical_device, ctx->surface);
+  scratch->offset = scratch_mark;
   aso_vk_create_logical_device(ctx);
   aso_vk_create_swap_chain(ctx);
   aso_vk_create_image_views(ctx);
   aso_vk_create_render_pass(ctx);
-  aso_vk_create_graphics_pipeline(ctx);
+  aso_vk_create_graphics_pipeline(scratch, ctx);
+  scratch->offset = scratch_mark;
   aso_vk_create_framebuffers(ctx);
   aso_vk_create_command_pool(ctx);
   aso_vk_create_command_buffers(ctx);
@@ -44,7 +48,7 @@ void aso_vk_init(aso_vk_ctx *ctx) {
 
 // REGION: INSTANCE
 
-void aso_vk_create_instance(aso_vk_ctx *ctx) {
+void aso_vk_create_instance(aso_arena *scratch, aso_vk_ctx *ctx) {
   assert(ctx != NULL);
 
   VkApplicationInfo app_info = {};
@@ -63,7 +67,7 @@ void aso_vk_create_instance(aso_vk_ctx *ctx) {
 
   // list avaiable layers
   u32 available_layer_count = 0;
-  VkLayerProperties *layers = aso_vk_get_available_layers(ctx->arena, &available_layer_count);
+  VkLayerProperties *layers = aso_vk_get_available_layers(scratch, &available_layer_count);
   aso_log("Available Vulkan layers:\n");
   for (int i = 0; i < available_layer_count; i++) {
     aso_log(" %s\n", layers[i].layerName);
@@ -85,7 +89,7 @@ void aso_vk_create_instance(aso_vk_ctx *ctx) {
 
   // list available extensions
   u32 available_extension_count = 0;
-  VkExtensionProperties *extensions = aso_vk_get_available_extensions(ctx->arena, &available_extension_count); 
+  VkExtensionProperties *extensions = aso_vk_get_available_extensions(scratch, &available_extension_count); 
   aso_log("Available Vulkan extensions:\n");
   for (u32 i = 0; i < available_extension_count; i++) {
     aso_log(" %s\n", extensions[i].extensionName);
@@ -101,42 +105,41 @@ void aso_vk_create_instance(aso_vk_ctx *ctx) {
 
   // REGION: INSTANCE
   // TODO: setup debug message callback
-  // TODO: use an explicit allocator
   ASO_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &ctx->instance), "Failed to create Vulkan instance\n");
 }
 
-VkExtensionProperties* aso_vk_get_available_extensions(aso_arena *arena, u32 *count) {
-  assert(arena != NULL);
+VkExtensionProperties* aso_vk_get_available_extensions(aso_arena *scratch, u32 *count) {
+  assert(scratch != NULL);
   assert(count != NULL);
 
   ASO_VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, NULL), "Failed to get available Vulkan extension count\n");
 
-  VkExtensionProperties *extensions = ASO_ARENA_ALLOC_ARRAY(arena, VkExtensionProperties, *count);
+  VkExtensionProperties *extensions = ASO_ARENA_ALLOC_ARRAY(scratch, VkExtensionProperties, *count);
 
   ASO_VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, extensions), "Failed to enumerate available Vulkan extensions\n");
   return extensions;
 }
 
-VkLayerProperties* aso_vk_get_available_layers(aso_arena *arena, u32 *count) {
-  assert(arena != NULL);
+VkLayerProperties* aso_vk_get_available_layers(aso_arena *scratch, u32 *count) {
+  assert(scratch != NULL);
   assert(count != NULL);
 
   ASO_VK_CHECK(vkEnumerateInstanceLayerProperties(count, NULL), "Failed to get available Vulkan layer count\n");
 
-  VkLayerProperties *layers = ASO_ARENA_ALLOC_ARRAY(arena, VkLayerProperties, *count);
+  VkLayerProperties *layers = ASO_ARENA_ALLOC_ARRAY(scratch, VkLayerProperties, *count);
 
   ASO_VK_CHECK(vkEnumerateInstanceLayerProperties(count, layers), "Failed to enumerate available Vulkan layers\n");
 
   return layers;
 }
 
-aso_vk_queue_families aso_vk_get_queue_families(aso_vk_ctx *ctx, VkPhysicalDevice physical_device) {
-  assert(ctx != NULL);
+aso_vk_queue_families aso_vk_get_queue_families(aso_arena *scratch, VkPhysicalDevice physical_device, VkSurfaceKHR surface) {
+  assert(scratch != NULL);
   aso_vk_queue_families indices = {};
 
   u32 queue_family_count = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
-  VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkQueueFamilyProperties, queue_family_count);
+  VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(scratch, VkQueueFamilyProperties, queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
   for (int i = 0; i < queue_family_count; i++) {
@@ -145,8 +148,9 @@ aso_vk_queue_families aso_vk_get_queue_families(aso_vk_ctx *ctx, VkPhysicalDevic
       indices.has_graphics_family = true;
     }
 
+    // TODO: query SDL for presentation support?
     VkBool32 presentation_support = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, ctx->surface, &presentation_support);
+    vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &presentation_support);
     if (presentation_support) {
       indices.present_family = i;
       indices.has_present_family = true;
@@ -212,7 +216,8 @@ bool aso_vk_check_validation_layer_support(VkLayerProperties *available_layers, 
 
 // REGION: PHYSICAL DEVICE
 
-void aso_vk_select_physical_device(aso_vk_ctx *ctx) {
+void aso_vk_select_physical_device(aso_arena *scratch, aso_vk_ctx *ctx) {
+  assert(scratch != NULL);
   assert(ctx != NULL);
 
   ctx->physical_device = VK_NULL_HANDLE;
@@ -226,14 +231,30 @@ void aso_vk_select_physical_device(aso_vk_ctx *ctx) {
     exit(1);
   }
 
-  VkPhysicalDevice *devices = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkPhysicalDevice, device_count);
+  VkPhysicalDevice *devices = ASO_ARENA_ALLOC_ARRAY(scratch, VkPhysicalDevice, device_count);
 
   ASO_VK_CHECK(vkEnumeratePhysicalDevices(ctx->instance, &device_count, devices), "Failed to enumerate GPUs");
 
   for (int i = 0; i < device_count; i++) {
-    if (aso_vk_is_device_suitable(ctx, devices[i])) {
+
+    aso_vk_queue_families families = aso_vk_get_queue_families(scratch, devices[i], ctx->surface);
+    bool extensions_supported = aso_vk_check_device_extension_support(scratch, devices[i]);
+
+    // skip further checks if needed extensions are not supported
+    if (!extensions_supported) continue;
+
+    aso_vk_surface_details details = aso_vk_get_surface_details(devices[i], ctx->surface);
+    bool surface_details_ok = details.formats_count > 0 && details.present_modes_count > 0;
+
+    bool device_is_suitable = families.has_graphics_family
+                           && families.has_present_family
+                           && extensions_supported
+                           && surface_details_ok;
+
+    if (device_is_suitable) {
       ctx->physical_device = devices[i];
-      aso_log(" = suitable\n");
+      ctx->queue_families = families;
+      ctx->surface_details = details;
       break;
     }
   }
@@ -243,40 +264,14 @@ void aso_vk_select_physical_device(aso_vk_ctx *ctx) {
   }
 }
 
-bool aso_vk_is_device_suitable(aso_vk_ctx *ctx, VkPhysicalDevice physical_device) {
-  assert(ctx != NULL);
-  assert(physical_device != VK_NULL_HANDLE);
-
-  VkPhysicalDeviceProperties device_properties;
-  VkPhysicalDeviceFeatures device_features;
-
-  vkGetPhysicalDeviceProperties(physical_device, &device_properties);
-  vkGetPhysicalDeviceFeatures(physical_device, &device_features);
-
-  aso_log("\n%s\n", device_properties.deviceName);
-
-  aso_vk_queue_families indices = aso_vk_get_queue_families(ctx, physical_device);
-  bool extensions_supported = aso_vk_check_device_extension_support(ctx->arena, physical_device);
-
-  // only check for swap chain support if the extension is supported
-  bool swap_chain_ok = false;
-  if (extensions_supported) {
-    // TODO: cache the details for later
-    aso_vk_swap_chain_support details = aso_vk_get_swap_chain_support(ctx, physical_device);
-    swap_chain_ok = details.formats_count > 0 && details.present_modes_count > 0;
-  }
-
-  return indices.has_graphics_family && indices.has_present_family && extensions_supported && swap_chain_ok;
-}
-
-
-bool aso_vk_check_device_extension_support(aso_arena *arena, VkPhysicalDevice physical_device) {
+bool aso_vk_check_device_extension_support(aso_arena *scratch, VkPhysicalDevice physical_device) {
+  assert(scratch != NULL);
   assert(physical_device != NULL);
 
   u32 extension_count;
   vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, NULL);
 
-  VkExtensionProperties *available_extensions = ASO_ARENA_ALLOC_ARRAY(arena, VkExtensionProperties, extension_count);
+  VkExtensionProperties *available_extensions = ASO_ARENA_ALLOC_ARRAY(scratch, VkExtensionProperties, extension_count);
   vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, available_extensions);
 
   // check each required extension is supported
@@ -297,25 +292,30 @@ bool aso_vk_check_device_extension_support(aso_arena *arena, VkPhysicalDevice ph
   return true;
 }
 
-aso_vk_swap_chain_support aso_vk_get_swap_chain_support(aso_vk_ctx *ctx, VkPhysicalDevice physical_device) {
-  assert(ctx != NULL);
+aso_vk_surface_details aso_vk_get_surface_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface) {
   assert(physical_device != NULL);
+  assert(surface != NULL);
 
-  aso_vk_swap_chain_support details = {0};
-
-  // capabilities
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, ctx->surface, &details.capabilities);
+  aso_vk_surface_details details = {
+    .formats_count = ASO_VK_MAX_SURFACE_FORMATS,
+    .present_modes_count = ASO_VK_MAX_PRESENT_MODES,
+  };
 
   // formats
-  vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, ctx->surface, &details.formats_count, NULL);
-  details.formats = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkSurfaceFormatKHR, details.formats_count);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, ctx->surface, &details.formats_count, details.formats);
+  //vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &details.formats_count, NULL);
+  VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &details.formats_count, details.formats);
+  assert (result == VK_SUCCESS || result == VK_INCOMPLETE);
+  if (result == VK_INCOMPLETE) {
+    aso_log("Too many surface formats (%u > %u)\n", details.formats_count, ASO_VK_MAX_SURFACE_FORMATS);
+  }
 
   // present modes
-  vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, ctx->surface, &details.present_modes_count, NULL);
-  details.present_modes = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkPresentModeKHR, details.present_modes_count);
-  vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, ctx->surface, &details.present_modes_count, details.present_modes);
-
+  //vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &details.present_modes_count, NULL);
+  result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &details.present_modes_count, details.present_modes);
+  assert (result == VK_SUCCESS || result == VK_INCOMPLETE);
+  if (result == VK_INCOMPLETE) {
+    aso_log("Too many present modes (%u > %u)\n", details.present_modes_count, ASO_VK_MAX_PRESENT_MODES);
+  }
   return details;
 }
 
@@ -325,15 +325,12 @@ aso_vk_swap_chain_support aso_vk_get_swap_chain_support(aso_vk_ctx *ctx, VkPhysi
 void aso_vk_create_logical_device(aso_vk_ctx *ctx) {
   assert(ctx != NULL);
 
-  // TODO: cache this earlier?
-  aso_vk_queue_families indices = aso_vk_get_queue_families(ctx, ctx->physical_device);
-
   // use a bitmap to produce an array of unique VkDeviceQueueCreateInfo
   // NOTE: max 8 unique queue families
   u8 unique_families = 0;
   u8 unique_family_count = 0;
-  unique_families |= (1 << indices.graphics_family);
-  unique_families |= (1 << indices.present_family);
+  unique_families |= (1 << ctx->queue_families.graphics_family);
+  unique_families |= (1 << ctx->queue_families.present_family);
 
   VkDeviceQueueCreateInfo queue_create_infos[8];
   float queue_priority = 1.0f;
@@ -371,8 +368,8 @@ void aso_vk_create_logical_device(aso_vk_ctx *ctx) {
 
   ASO_VK_CHECK(vkCreateDevice(ctx->physical_device, &device_create_info, NULL, &ctx->device), "Failed to create logical device\n");
 
-  vkGetDeviceQueue(ctx->device, indices.graphics_family, 0, &ctx->graphics_queue);
-  vkGetDeviceQueue(ctx->device, indices.present_family, 0, &ctx->presentation_queue);
+  vkGetDeviceQueue(ctx->device, ctx->queue_families.graphics_family, 0, &ctx->graphics_queue);
+  vkGetDeviceQueue(ctx->device, ctx->queue_families.present_family, 0, &ctx->presentation_queue);
 }
 
 // REGION: SWAP CHAIN
@@ -382,33 +379,37 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
 
   aso_log("\nCreating swap chain..\n");
 
-  aso_vk_swap_chain_support details = aso_vk_get_swap_chain_support(ctx, ctx->physical_device);
+  //aso_vk_surface_details details = aso_vk_get_surface_detais(scratch, ctx, ctx->physical_device);
+  VkSurfaceCapabilitiesKHR capabilities = {};
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx->physical_device, ctx->surface, &capabilities);
+  
+  aso_vk_surface_details *details = &ctx->surface_details;
 
   // surface format
-  VkSurfaceFormatKHR surface_format = details.formats[0];
-  for (int i = 0; i < details.formats_count; i++) {
-    if (details.formats[i].format == VK_FORMAT_B8G8R8A8_SRGB && details.formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-      surface_format = details.formats[i];
+  VkSurfaceFormatKHR surface_format = details->formats[0];
+  for (int i = 0; i < details->formats_count; i++) {
+    if (details->formats[i].format == VK_FORMAT_B8G8R8A8_SRGB && details->formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+      surface_format = details->formats[i];
       break;
     }
   }
 
   // present mode
   VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
-  for (int i = 0; i < details.present_modes_count; i++) {
-    if (details.present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+  for (int i = 0; i < details->present_modes_count; i++) {
+    if (details->present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
       present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
       break;
     }
   }
   
   // extent
-  VkExtent2D extent = aso_vk_get_swap_extent(&details.capabilities);
+  VkExtent2D extent = aso_vk_get_swap_extent(capabilities);
   aso_log(" Extent: %d x %d\n", extent.width, extent.height);
 
-  u32 image_count = details.capabilities.minImageCount + 1;
-  if (details.capabilities.maxImageCount > 0 && image_count > details.capabilities.maxImageCount) {
-    image_count = details.capabilities.maxImageCount;
+  u32 image_count = capabilities.minImageCount + 1;
+  if (capabilities.maxImageCount > 0 && image_count > capabilities.maxImageCount) {
+    image_count = capabilities.maxImageCount;
   }
 
   VkSwapchainCreateInfoKHR create_info = {};
@@ -421,20 +422,19 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
   create_info.minImageCount = image_count;
   create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  aso_vk_queue_families indices = aso_vk_get_queue_families(ctx, ctx->physical_device);
-  u32 queue_family_indices[] = { indices.graphics_family, indices.present_family };
+  u32 queue_family_indices[] = { ctx->queue_families.graphics_family, ctx->queue_families.present_family };
 
   // if the queue families are different, we use concurrent mode to share images
   // NOTE: exclusive mode is ideal but requires explicit ownership transfers
-  if (indices.graphics_family != indices.present_family) {
+  if (ctx->queue_families.graphics_family != ctx->queue_families.present_family) {
     create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-    create_info.queueFamilyIndexCount = 2; // TODO: this should not be hardcoded
+    create_info.queueFamilyIndexCount = 2; // TODO: this should not be hardcoded here
     create_info.pQueueFamilyIndices = queue_family_indices;
   } else {
     create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }
 
-  create_info.preTransform = details.capabilities.currentTransform;
+  create_info.preTransform = capabilities.currentTransform;
   create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   create_info.presentMode = present_mode;
   create_info.clipped = VK_TRUE;
@@ -443,8 +443,14 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
   ASO_VK_CHECK(vkCreateSwapchainKHR(ctx->device, &create_info, NULL, &ctx->swap_chain), "Failed to create swap chain\n");
 
   // retrieve swap chain image handles
-  vkGetSwapchainImagesKHR(ctx->device, ctx->swap_chain, &ctx->swap_chain_images_count, NULL);
-  ctx->swap_chain_images = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkImage, ctx->swap_chain_images_count);
+  // we store in fixed sized arrays so we need to check the count
+  u32 image_handle_count = 0;
+  vkGetSwapchainImagesKHR(ctx->device, ctx->swap_chain, &image_handle_count, NULL);
+  if (image_handle_count > ASO_VK_SWAP_CHAIN_MAX_IMAGES) {
+    aso_log("Swap chain allocated too many images (%u > %u)\n", image_handle_count, ASO_VK_SWAP_CHAIN_MAX_IMAGES);
+    exit(1);
+  }
+  ctx->swap_chain_images_count = image_handle_count;
   vkGetSwapchainImagesKHR(ctx->device, ctx->swap_chain, &ctx->swap_chain_images_count, ctx->swap_chain_images);
 
   // store format and extent for later use
@@ -452,21 +458,19 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
   ctx->swap_chain_extent = extent;
 }
 
-VkExtent2D aso_vk_get_swap_extent(VkSurfaceCapabilitiesKHR *capabilities) {
-  assert(capabilities != NULL);
-
+VkExtent2D aso_vk_get_swap_extent(VkSurfaceCapabilitiesKHR capabilities) {
   // check current extents for special value
   // -> go with already set extent
   // -> special value set: set swap extent here and the surface will conform
-  if (capabilities->currentExtent.width != 0xFFFFFFFF) {
-    return capabilities->currentExtent;
+  if (capabilities.currentExtent.width != 0xFFFFFFFF) {
+    return capabilities.currentExtent;
   } else {
     int width, height;
     aso_get_window_size(&g_ctx->window, &width, &height);
     aso_log("Window extent: %dx%d\n", width, height);
     VkExtent2D extent = {
-      CLAMP(width, capabilities->minImageExtent.width, capabilities->maxImageExtent.width),
-      CLAMP(height, capabilities->minImageExtent.height, capabilities->maxImageExtent.height)
+      CLAMP(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+      CLAMP(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
     };
 
     return extent;
@@ -512,8 +516,9 @@ void aso_vk_cleanup_swap_chain(aso_vk_ctx *ctx) {
 // REGION: IMAGE VIEWS
 
 void aso_vk_create_image_views(aso_vk_ctx *ctx) {
+  // image views count matches image count
+  // so we do not need to worry about array bounds here
   ctx->swap_chain_image_views_count = ctx->swap_chain_images_count;
-  ctx->swap_chain_image_views = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkImageView, ctx->swap_chain_image_views_count);
   for (size_t i = 0; i < ctx->swap_chain_images_count; i++) {
     VkImageViewCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -537,23 +542,17 @@ void aso_vk_create_image_views(aso_vk_ctx *ctx) {
 
 // REGION: GRAPHICS PIPELINE
 
-void aso_vk_create_graphics_pipeline(aso_vk_ctx *ctx) {
+void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_ctx *ctx) {
   assert(ctx != NULL);
-  assert(ctx->arena != NULL);
+  assert(scratch != NULL);
 
   // load shader bytecode into shader modules
-
-  size_t check_point = ctx->arena->offset;
-
   long vert_shader_code_size = 0;
   long frag_shader_code_size = 0;
-  u8 *vert_shader_code = aso_read_binary_file(ctx->arena, "assets/vert.spv", &vert_shader_code_size);
-  u8 *frag_shader_code = aso_read_binary_file(ctx->arena, "assets/frag.spv", &frag_shader_code_size);
+  u8 *vert_shader_code = aso_read_binary_file(scratch, "assets/vert.spv", &vert_shader_code_size);
+  u8 *frag_shader_code = aso_read_binary_file(scratch, "assets/frag.spv", &frag_shader_code_size);
   VkShaderModule vert_shader_module = aso_vk_create_shader_module(ctx->device, vert_shader_code, vert_shader_code_size);
   VkShaderModule frag_shader_module = aso_vk_create_shader_module(ctx->device, frag_shader_code, frag_shader_code_size);
-
-  // we dont need the shader code anymore
-  ctx->arena->offset = check_point;
 
   // shader stages
   
@@ -756,9 +755,8 @@ void aso_vk_create_framebuffers(aso_vk_ctx *ctx) {
   // we create a framebuffer for each imageview in the swap chain
 
   ctx->swap_chain_framebuffers_count = ctx->swap_chain_image_views_count;
-  ctx->swap_chain_framebuffers = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkFramebuffer, ctx->swap_chain_framebuffers_count);
 
-  for (size_t i = 0; i < ctx->swap_chain_image_views_count; i++) {
+  for (size_t i = 0; i < ctx->swap_chain_framebuffers_count; i++) {
     VkImageView attachments[] = {
       ctx->swap_chain_image_views[i]
     };
@@ -780,12 +778,11 @@ void aso_vk_create_framebuffers(aso_vk_ctx *ctx) {
 void aso_vk_create_command_pool(aso_vk_ctx *ctx) {
   assert(ctx != NULL);
 
-  aso_vk_queue_families queue_family_indices = aso_vk_get_queue_families(ctx, ctx->physical_device);
 
   VkCommandPoolCreateInfo pool_info = {};
   pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // reset command buffers every frame
-  pool_info.queueFamilyIndex = queue_family_indices.graphics_family;
+  pool_info.queueFamilyIndex = ctx->queue_families.graphics_family;
 
   ASO_VK_CHECK(vkCreateCommandPool(ctx->device, &pool_info, NULL, &ctx->command_pool), "Failed to create command pool\n");
 }
@@ -794,9 +791,7 @@ void aso_vk_create_command_pool(aso_vk_ctx *ctx) {
 
 void aso_vk_create_command_buffers(aso_vk_ctx *ctx) {
   assert (ctx != NULL);
-
-  ctx->command_buffers = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkCommandBuffer, ASO_VK_FRAMES_IN_FLIGHT);
-
+  
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   alloc_info.commandPool = ctx->command_pool;
@@ -866,12 +861,7 @@ void aso_vk_record_command_buffer(aso_vk_ctx *ctx, u32 image_index) {
 
 void aso_vk_create_sync_objects(aso_vk_ctx *ctx) {
   assert(ctx != NULL);
-
-  ctx->image_available_semaphores = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkSemaphore, ASO_VK_FRAMES_IN_FLIGHT);
-  ctx->render_finished_semaphores = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkSemaphore, ASO_VK_FRAMES_IN_FLIGHT);
-  ctx->in_flight_fences = ASO_ARENA_ALLOC_ARRAY(ctx->arena, VkFence, ASO_VK_FRAMES_IN_FLIGHT);
-
-
+  
   VkSemaphoreCreateInfo semaphore_info = {};
   semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -978,6 +968,6 @@ void aso_vk_cleanup(aso_vk_ctx *ctx) {
   vkDestroySurfaceKHR(ctx->instance, ctx->surface, NULL);
   vkDestroyInstance(ctx->instance, NULL);
 
-  aso_arena_destroy(ctx->arena);
+  // TODO: aso_arena_destroy(ctx->frame_arena);
   // NOTE: physical_device and queues are cleaned up implicitly
 }

@@ -20,7 +20,7 @@ void aso_init(aso_ctx *ctx) {
   aso_window_init(&ctx->window);
 
   // init vulkan
-  aso_vk_init(&ctx->vulkan);
+  aso_vk_init(ctx->scratch, &ctx->vulkan);
 
   // show window
   aso_window_show(&ctx->window);
