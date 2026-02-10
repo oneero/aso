@@ -13,12 +13,7 @@
 
 uintptr_t aso_align_forward(uintptr_t ptr, size_t align) {
   assert(aso_is_power_of_two(align));
-  uintptr_t p, a, modulo;
-  p = ptr;
-  a = (uintptr_t)align;
-  modulo = p & (a - 1); // remainder, a - modulo = gap to aligned value
-  p += a - modulo; // push to aligned value
-  return p;
+  return (ptr + align - 1) & ~(align - 1);
 };
 
 static size_t aso_get_os_page_size(void) {
