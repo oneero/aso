@@ -74,7 +74,7 @@ struct aso_vk_ctx
   VkCommandPool          command_pool;
   VkCommandBuffer        command_buffers[ASO_VK_FRAMES_IN_FLIGHT];
   VkSemaphore            image_available_semaphores[ASO_VK_FRAMES_IN_FLIGHT];
-  VkSemaphore            render_finished_semaphores[ASO_VK_FRAMES_IN_FLIGHT];
+  VkSemaphore            render_finished_semaphores[ASO_VK_SWAP_CHAIN_MAX_IMAGES];
   VkFence                in_flight_fences[ASO_VK_FRAMES_IN_FLIGHT];
 };
 

@@ -871,8 +871,14 @@ void aso_vk_create_sync_objects(aso_vk_ctx *ctx) {
 
   for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
     ASO_VK_CHECK(vkCreateSemaphore(ctx->device, &semaphore_info, NULL, &ctx->image_available_semaphores[i]), "Failed to create semaphore\n");
-    ASO_VK_CHECK(vkCreateSemaphore(ctx->device, &semaphore_info, NULL, &ctx->render_finished_semaphores[i]), "Failed to create semaphore\n");
     ASO_VK_CHECK(vkCreateFence(ctx->device, &fence_info, NULL, &ctx->in_flight_fences[i]), "Failed to create fence\n");
+  }
+  // one render_finished_semaphore per image
+  // when we get an image back from the swap chain, we are implicitly guaranteed that
+  // the presentation engine has completed the work and the semaphore can be reused
+  // https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
+  for (size_t i = 0; i < ASO_VK_SWAP_CHAIN_MAX_IMAGES; i++) {
+    ASO_VK_CHECK(vkCreateSemaphore(ctx->device, &semaphore_info, NULL, &ctx->render_finished_semaphores[i]), "Failed to create semaphore\n");
   }
 }
 
@@ -882,19 +888,35 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   assert(ctx != NULL);
 
   u32 f = ctx->frame;
+
+  // wait for previous queue submit to complete
+  // NOTE: does not guarantee presentation engine has finished
   vkWaitForFences(ctx->device, 1, &ctx->in_flight_fences[f], VK_TRUE, UINT64_MAX);
 
   u32 image_index;
   VkResult image_acquire_result = vkAcquireNextImageKHR(ctx->device, ctx->swap_chain, UINT64_MAX, ctx->image_available_semaphores[f], VK_NULL_HANDLE, &image_index);
+
+  // check if we need to recreate swap chain due to changed extents etc
   if (image_acquire_result == VK_ERROR_OUT_OF_DATE_KHR ||
       image_acquire_result == VK_SUBOPTIMAL_KHR ||
       ctx->window_resized) {
     ctx->window_resized = false;
+    aso_log("Swap chain image out of date or resized when acquiring image\n");
+
     aso_vk_recreate_swap_chain(ctx);
+    // need to recreate tainted semaphore
+    // NOTE: recreate_swap_chain() above calls vkDeviceWaitIdle()
+    vkDestroySemaphore(ctx->device, ctx->image_available_semaphores[f], NULL);
+    VkSemaphoreCreateInfo info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    vkCreateSemaphore(ctx->device, &info, NULL, &ctx->image_available_semaphores[f]);
+
     return;
   } else if (image_acquire_result != VK_SUCCESS) {
+    aso_log("Failed to acquire swap chain image\n");
+    exit(1);
   }
 
+  // reset fence after we know we will be using acquired image
   vkResetFences(ctx->device, 1, &ctx->in_flight_fences[f]);
   
   vkResetCommandBuffer(ctx->command_buffers[f], 0);
@@ -912,7 +934,8 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   submit_info.commandBufferCount = 1;
   submit_info.pCommandBuffers = &ctx->command_buffers[f];
 
-  VkSemaphore signal_semaphores[] = {ctx->render_finished_semaphores[f]};
+  // use image_index here and per image semaphore so we know presentation has completed
+  VkSemaphore signal_semaphores[] = {ctx->render_finished_semaphores[image_index]};
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = signal_semaphores;
 
@@ -934,7 +957,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
       present_result == VK_SUBOPTIMAL_KHR ||
       ctx->window_resized) {
-    aso_log("Swap chain image out of date\n");
+    aso_log("Swap chain image out of date when presenting\n");
     ctx->window_resized = false;
     aso_vk_recreate_swap_chain(ctx);
   } else if (present_result != VK_SUCCESS) {
@@ -957,8 +980,10 @@ void aso_vk_cleanup(aso_vk_ctx *ctx) {
   
   for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(ctx->device, ctx->image_available_semaphores[i], NULL);
-    vkDestroySemaphore(ctx->device, ctx->render_finished_semaphores[i], NULL);
     vkDestroyFence(ctx->device, ctx->in_flight_fences[i], NULL);
+  }
+  for (size_t i = 0; i < ASO_VK_SWAP_CHAIN_MAX_IMAGES; i++) {
+    vkDestroySemaphore(ctx->device, ctx->render_finished_semaphores[i], NULL);
   }
 
   // NOTE: Destroying command bool will implicitly free command buffers
