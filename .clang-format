@@ -11,6 +11,7 @@ PointerAlignment: Right
 SortIncludes: true
 IndentCaseLabels: true
 SpaceAfterCStyleCast: true
+AlignConsecutiveMacros: true
 AlignConsecutiveDeclarations:
   Enabled:                    true
   AcrossEmptyLines:           true
