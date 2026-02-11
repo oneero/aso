@@ -8,7 +8,7 @@ project(aso
     CXX
 )
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(USE_SANITIZERS "ASan/UBSan" ON)
@@ -42,6 +42,7 @@ target_compile_options(aso PRIVATE
   -Wconversion
   -Wshadow
   -Wno-unused-parameter
+  -Wno-missing-designated-field-initializers
   -Werror
   -fno-exceptions
   -fno-rtti
