@@ -7,7 +7,7 @@ extern "C" const char *__lsan_default_suppressions() {
 #endif
 
 int main(int argc, char *argv[]) {
-  aso_ctx ctx = {0};
+  aso_ctx ctx = {};
   aso_init(&ctx);
   aso_run();
   aso_cleanup();

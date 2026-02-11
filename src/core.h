@@ -30,7 +30,7 @@ typedef float f32;
 
 // logging function
 // currently simply wraps printf
-static void aso_log(const char *fmt, ...) {
+static inline void aso_log(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   vprintf(fmt, args);

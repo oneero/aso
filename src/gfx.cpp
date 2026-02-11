@@ -69,7 +69,7 @@ void aso_vk_create_instance(aso_arena *scratch, aso_vk_ctx *ctx) {
   u32 available_layer_count = 0;
   VkLayerProperties *layers = aso_vk_get_available_layers(scratch, &available_layer_count);
   aso_log("Available Vulkan layers:\n");
-  for (int i = 0; i < available_layer_count; i++) {
+  for (u32 i = 0; i < available_layer_count; i++) {
     aso_log(" %s\n", layers[i].layerName);
   }
 
@@ -81,7 +81,7 @@ void aso_vk_create_instance(aso_arena *scratch, aso_vk_ctx *ctx) {
   instance_create_info.ppEnabledLayerNames = aso_vk_define_layers(&instance_create_info.enabledLayerCount);
 
   aso_log("Enabled Vulkan layers:\n");
-  for (int i = 0; i < instance_create_info.enabledLayerCount; i++) {
+  for (u32 i = 0; i < instance_create_info.enabledLayerCount; i++) {
     aso_log(" %s\n", instance_create_info.ppEnabledLayerNames[i]);
   }
 
@@ -99,7 +99,7 @@ void aso_vk_create_instance(aso_arena *scratch, aso_vk_ctx *ctx) {
   instance_create_info.ppEnabledExtensionNames = aso_vk_define_extensions(&instance_create_info.enabledExtensionCount);
 
   aso_log("Enabled Vulkan extensions:\n");
-  for (int i = 0; i < instance_create_info.enabledExtensionCount; i++) {
+  for (u32 i = 0; i < instance_create_info.enabledExtensionCount; i++) {
     aso_log(" %s\n", instance_create_info.ppEnabledExtensionNames[i]);
   }
 
@@ -142,7 +142,7 @@ aso_vk_queue_families aso_vk_get_queue_families(aso_arena *scratch, VkPhysicalDe
   VkQueueFamilyProperties *queue_families = ASO_ARENA_ALLOC_ARRAY(scratch, VkQueueFamilyProperties, queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
-  for (int i = 0; i < queue_family_count; i++) {
+  for (u32 i = 0; i < queue_family_count; i++) {
     if (queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       indices.graphics_family = i;
       indices.has_graphics_family = true;
@@ -199,7 +199,7 @@ bool aso_vk_check_validation_layer_support(VkLayerProperties *available_layers, 
   for (int i = 0; i < ASO_VK_VALIDATION_LAYER_COUNT; i++) {
     bool layer_found = false;
 
-    for (int j = 0; j < count; j++) {
+    for (u32 j = 0; j < count; j++) {
       if (strcmp(aso_vulkan_validation_layers[i], available_layers[j].layerName) == 0) {
         layer_found = true;
         break;
@@ -235,7 +235,7 @@ void aso_vk_select_physical_device(aso_arena *scratch, aso_vk_ctx *ctx) {
 
   ASO_VK_CHECK(vkEnumeratePhysicalDevices(ctx->instance, &device_count, devices), "Failed to enumerate GPUs");
 
-  for (int i = 0; i < device_count; i++) {
+  for (u32 i = 0; i < device_count; i++) {
 
     aso_vk_queue_families families = aso_vk_get_queue_families(scratch, devices[i], ctx->surface);
     bool extensions_supported = aso_vk_check_device_extension_support(scratch, devices[i]);
@@ -277,7 +277,7 @@ bool aso_vk_check_device_extension_support(aso_arena *scratch, VkPhysicalDevice 
   // check each required extension is supported
   for (int i = 0; i < ASO_VK_DEVICE_EXTENSION_COUNT; i++) {
     bool found = false;
-    for (int j = 0; j < extension_count; j++) {
+    for (u32 j = 0; j < extension_count; j++) {
       if (strcmp(aso_vulkan_device_extensions[i], available_extensions[j].extensionName) == 0) {
         found = true;
         break;
@@ -387,7 +387,7 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
 
   // surface format
   VkSurfaceFormatKHR surface_format = details->formats[0];
-  for (int i = 0; i < details->formats_count; i++) {
+  for (u32 i = 0; i < details->formats_count; i++) {
     if (details->formats[i].format == VK_FORMAT_B8G8R8A8_SRGB && details->formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       surface_format = details->formats[i];
       break;
@@ -396,7 +396,7 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
 
   // present mode
   VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
-  for (int i = 0; i < details->present_modes_count; i++) {
+  for (u32 i = 0; i < details->present_modes_count; i++) {
     if (details->present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
       present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
       break;
@@ -469,8 +469,8 @@ VkExtent2D aso_vk_get_swap_extent(VkSurfaceCapabilitiesKHR capabilities) {
     aso_get_window_size(&g_ctx->window, &width, &height);
     aso_log("Window extent: %dx%d\n", width, height);
     VkExtent2D extent = {
-      CLAMP(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-      CLAMP(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+      CLAMP((u32)width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+      CLAMP((u32)height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
     };
 
     return extent;
@@ -547,8 +547,8 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_ctx *ctx) {
   assert(scratch != NULL);
 
   // load shader bytecode into shader modules
-  long vert_shader_code_size = 0;
-  long frag_shader_code_size = 0;
+  size_t vert_shader_code_size = 0;
+  size_t frag_shader_code_size = 0;
   u8 *vert_shader_code = aso_read_binary_file(scratch, "assets/vert.spv", &vert_shader_code_size);
   u8 *frag_shader_code = aso_read_binary_file(scratch, "assets/frag.spv", &frag_shader_code_size);
   VkShaderModule vert_shader_module = aso_vk_create_shader_module(ctx->device, vert_shader_code, vert_shader_code_size);
@@ -690,7 +690,7 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_ctx *ctx) {
   vkDestroyShaderModule(ctx->device, vert_shader_module, NULL);
 }
 
-VkShaderModule aso_vk_create_shader_module(VkDevice device, u8 *shader_code, long code_size) {
+VkShaderModule aso_vk_create_shader_module(VkDevice device, u8 *shader_code, size_t code_size) {
   VkShaderModuleCreateInfo create_info = {};
   create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   create_info.codeSize = code_size;
@@ -907,7 +907,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
     // need to recreate tainted semaphore
     // NOTE: recreate_swap_chain() above calls vkDeviceWaitIdle()
     vkDestroySemaphore(ctx->device, ctx->image_available_semaphores[f], NULL);
-    VkSemaphoreCreateInfo info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+    VkSemaphoreCreateInfo info = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
     vkCreateSemaphore(ctx->device, &info, NULL, &ctx->image_available_semaphores[f]);
 
     return;

@@ -108,7 +108,7 @@ aso_vk_surface_details    aso_vk_get_surface_details(VkPhysicalDevice physical_d
 // pipeline
 void                      aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_ctx *ctx);
 void                      aso_vk_create_render_pass(aso_vk_ctx *ctx);
-VkShaderModule            aso_vk_create_shader_module(VkDevice device, u8 *shader_code, long code_size);
+VkShaderModule            aso_vk_create_shader_module(VkDevice device, u8 *shader_code, size_t code_size);
 
 // frame
 void                      aso_vk_create_command_pool(aso_vk_ctx *ctx);

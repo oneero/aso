@@ -24,7 +24,8 @@ static size_t aso_get_os_page_size(void) {
     GetSystemInfo(&si);
     aso_os_page_size = si.dwPageSize;
 #else
-    aso_os_page_size = sysconf(_SC_PAGESIZE);
+    long result = sysconf(_SC_PAGESIZE);
+    aso_os_page_size = (result > 0) ? (size_t)result : 4096;
 #endif // _WIN32
   }
   return aso_os_page_size;

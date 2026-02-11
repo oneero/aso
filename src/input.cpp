@@ -9,10 +9,10 @@ void aso_input_poll(aso_cmd_buffer *cmds) {
   while (SDL_PollEvent(&e)) {
     if (e.type == SDL_EVENT_QUIT ||
         (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)) {
-      cmds->items[cmds->count++] = (aso_cmd){CMD_QUIT};
+      cmds->items[cmds->count++] = aso_cmd{CMD_QUIT};
     }
     if (e.type == SDL_EVENT_WINDOW_RESIZED) {
-      cmds->items[cmds->count++] = (aso_cmd){CMD_WIN_RESIZE};
+      cmds->items[cmds->count++] = aso_cmd{CMD_WIN_RESIZE};
     }
   }
 }
