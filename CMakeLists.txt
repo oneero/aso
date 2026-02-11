@@ -18,10 +18,14 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(BUILD_DEBUG=1)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_definitions(BUILD_RELEASE=1)
+endif()
 
 find_package(Vulkan REQUIRED)
 find_package(SDL3 REQUIRED)
-
 
 add_executable(aso
     src/main.cpp
