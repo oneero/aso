@@ -4,6 +4,6 @@
 #include "core.h"
 #include "mem.h"
 
-u8 *aso_read_binary_file(aso_arena *arena, const char *file_path, long *size);
+u8 *aso_read_binary_file(aso_arena *arena, const char *file_path, size_t *size);
 
 #endif // ASO_IO_H

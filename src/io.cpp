@@ -5,7 +5,7 @@
 #include "core.h"
 #include "mem.h"
 
-u8 *aso_read_binary_file(aso_arena *arena, const char *file_path, long *size) {
+u8 *aso_read_binary_file(aso_arena *arena, const char *file_path, size_t *size) {
   assert(arena != NULL);
   assert(file_path != NULL);
   assert(size != NULL);
@@ -22,18 +22,20 @@ u8 *aso_read_binary_file(aso_arena *arena, const char *file_path, long *size) {
     return NULL;
   }
 
-  *size = ftell(f);
-  if (*size < 0) {
+  long fs = ftell(f);
+  if (fs < 0) {
     aso_log("Failed to determine file size: %s\n", file_path);
     fclose(f);
     return NULL;
   }
   
-  if (*size == 0) {
+  if (fs == 0) {
     aso_log("File is empty: %s\n", file_path);
     fclose(f);
     return NULL;
   }
+
+  *size = (size_t)fs;
 
   rewind(f);
 
@@ -46,7 +48,7 @@ u8 *aso_read_binary_file(aso_arena *arena, const char *file_path, long *size) {
 
   size_t arena_checkpoint = arena->offset;
   size_t read = fread(buf, 1, *size, f);
-  if ((long)read != *size) {
+  if (read != *size) {
     aso_log("Failed to read entire file: %s\n", file_path);
     fclose(f);
     arena->offset = arena_checkpoint;
