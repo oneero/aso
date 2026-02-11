@@ -1,6 +1,5 @@
 #include "window.h"
 #include "core.h"
-#include "gfx.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
@@ -9,21 +8,21 @@
 
 int aso_window_init(aso_window *window) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
-    aso_log("SDL init failed: %s\n", SDL_GetError());
+    LOG("SDL init failed: %s", SDL_GetError());
     return 1;
   }
-  aso_log("SDL initialized\n");
+  LOG("SDL initialized");
 
   SDL_Window *w = nullptr;
 
   SDL_WindowFlags wflags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
   w = SDL_CreateWindow("aso", 640, 480, wflags);
   if (!w) {
-    aso_log("SDL_CreateWindow failed: %s\n", SDL_GetError());
+    LOG("SDL_CreateWindow failed: %s", SDL_GetError());
     SDL_Quit();
     return 1;
   }
-  aso_log("window created\n");
+  LOG("window created");
 
   SDL_SetWindowPosition(w, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
@@ -31,7 +30,7 @@ int aso_window_init(aso_window *window) {
   window->width = 640;
   window->height = 480;
 
-  aso_log("SDL ready\n");
+  LOG("SDL ready");
   return 0;
 }
 

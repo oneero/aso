@@ -122,15 +122,15 @@ void                      aso_vk_create_sync_objects(aso_vk_ctx *ctx);
 // on false outputs to log and exit(1)
 #define ASO_VK_CHECK(call, msg) ASO_VK_CHECK_EX(call, VK_SUCCESS, msg)
 #define ASO_VK_CHECK_EX(call, expected, msg)                      \
-  do {                                                            \
+  STMNT(                                                          \
     VkResult result = call;                                       \
     if (result != expected) {                                     \
-      aso_log("VULKAN ERROR\n"                                    \
+      LOG("VULKAN ERROR\n"                                    \
               " %s\n"                                             \
               " %s:%d: %s != %s (got %d)\n",                      \
               msg, __FILE__, __LINE__, #call, #expected, result); \
       exit(1);                                                    \
     }                                                             \
-  } while (0)
+  )
 
 #endif // ASO_GFX_H

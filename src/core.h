@@ -2,6 +2,7 @@
 #define ASO_CORE_H
 
 #include <cstdint>
+#include <cstdio>
 
 // REGION: COMPILER
 
@@ -136,9 +137,9 @@ typedef float f32;
 
 // REGION: LOGGING
 
-#define LOG(fmt, ...)        fprintf(stdout, fmt "\n", ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...)  fprintf(stderr, "[ERROR] %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-#define LogWarning(fmt, ...) fprintf(stderr, "[WARN]  %s:%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#define LOG(fmt, ...)        fprintf(stdout, fmt "\n" __VA_OPT__(,) __VA_ARGS__)
+#define LOG_ERROR(fmt, ...)  fprintf(stderr, "[ERROR] %s:%d: " fmt "\n", __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+#define LogWarning(fmt, ...) fprintf(stderr, "[WARN]  %s:%d: " fmt "\n", __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
 // REGION: UTILITY / MATH
 

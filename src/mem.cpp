@@ -1,18 +1,20 @@
-#include "mem.h"
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 
-#ifdef _WIN32
+#ifdef OS_WINDOWS
 #include <windows.h>
 #else
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
 
+#include "core.h"
+#include "mem.h"
+
 uintptr_t aso_align_forward(uintptr_t ptr, size_t align) {
-  assert(aso_is_power_of_two(align));
+  ASSERT(aso_is_power_of_two(align));
   return (ptr + align - 1) & ~(align - 1);
 };
 
@@ -71,7 +73,7 @@ aso_arena* aso_arena_create(void) {
 }
 
 void* aso_arena_alloc(aso_arena *arena, size_t size, size_t align) {
-  assert(arena != NULL);
+  ASSERT(arena != NULL);
   size_t aligned_offset = aso_align_forward(arena->offset, align);
   size_t new_offset = aligned_offset + size;
   if (new_offset > ASO_ARENA_RESERVE_SIZE) {
@@ -118,7 +120,7 @@ void* aso_arena_alloc(aso_arena *arena, size_t size, size_t align) {
   arena->alloc_count++;
   arena->alloc_total += size; // use offset instead?
   arena->peak = MAX(arena->peak, arena->offset);
-  aso_log("[arena %p] alloc #%zu: %zu bytes @ %p (usage: %zu / %zu)\n", (void *)arena, arena->alloc_count, size, memory, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->size);
+  LOG("[arena %p] alloc #%zu: %zu bytes @ %p (usage: %zu / %zu)", (void *)arena, arena->alloc_count, size, memory, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->size);
 
 #endif
 
@@ -126,9 +128,9 @@ void* aso_arena_alloc(aso_arena *arena, size_t size, size_t align) {
 }
 
 void aso_arena_free(aso_arena *arena) {
-  assert(arena != NULL);
+  ASSERT(arena != NULL);
 #ifdef ASO_ARENA_DEBUG
-  fprintf(stderr, "[arena %p] reset: freed %zu bytes from %zu allocations\n", (void*)arena, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->alloc_count);
+  fprintf(stderr, "[arena %p] reset: freed %zu bytes from %zu allocations", (void*)arena, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->alloc_count);
   arena->alloc_count = 0;
   arena->alloc_total = 0;
 #endif
@@ -136,7 +138,7 @@ void aso_arena_free(aso_arena *arena) {
 }
 
 void aso_arena_destroy(aso_arena *arena) {
-  assert(arena != NULL);
+  ASSERT(arena != NULL);
 #ifdef _WIN32
   VirtualFree(arena->base, 0, MEM_RELEASE);
 #else

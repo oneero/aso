@@ -1,4 +1,3 @@
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -27,7 +26,7 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
   aso_vk_create_instance(scratch, ctx);
   scratch->offset = scratch_mark;
   if (!aso_create_vulkan_surface(g_ctx->window.handle, ctx->instance, &ctx->surface)) {
-    aso_log("Failed to create SDL3 Vulkan surface\n");
+    LOG("Failed to create SDL3 Vulkan surface");
     exit(1);
   }
   aso_vk_select_physical_device(scratch, ctx);
@@ -49,7 +48,7 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
 // REGION: INSTANCE
 
 void aso_vk_create_instance(aso_arena *scratch, aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -68,21 +67,21 @@ void aso_vk_create_instance(aso_arena *scratch, aso_vk_ctx *ctx) {
   // list avaiable layers
   u32 available_layer_count = 0;
   VkLayerProperties *layers = aso_vk_get_available_layers(scratch, &available_layer_count);
-  aso_log("Available Vulkan layers:\n");
+  LOG("Available Vulkan layers:");
   for (u32 i = 0; i < available_layer_count; i++) {
-    aso_log(" %s\n", layers[i].layerName);
+    LOG(" %s", layers[i].layerName);
   }
 
   if (aso_vk_enable_validation_layers && !aso_vk_check_validation_layer_support(layers, available_layer_count)) {
-    aso_log("Vulkan validation layers not supported\n");
+    LOG("Vulkan validation layers not supported");
     aso_vk_enable_validation_layers = false;
   }
 
   instance_create_info.ppEnabledLayerNames = aso_vk_define_layers(&instance_create_info.enabledLayerCount);
 
-  aso_log("Enabled Vulkan layers:\n");
+  LOG("Enabled Vulkan layers:");
   for (u32 i = 0; i < instance_create_info.enabledLayerCount; i++) {
-    aso_log(" %s\n", instance_create_info.ppEnabledLayerNames[i]);
+    LOG(" %s", instance_create_info.ppEnabledLayerNames[i]);
   }
 
   // REGION: EXTENSIONS
@@ -90,51 +89,51 @@ void aso_vk_create_instance(aso_arena *scratch, aso_vk_ctx *ctx) {
   // list available extensions
   u32 available_extension_count = 0;
   VkExtensionProperties *extensions = aso_vk_get_available_extensions(scratch, &available_extension_count); 
-  aso_log("Available Vulkan extensions:\n");
+  LOG("Available Vulkan extensions:");
   for (u32 i = 0; i < available_extension_count; i++) {
-    aso_log(" %s\n", extensions[i].extensionName);
+    LOG(" %s", extensions[i].extensionName);
   }
 
   // configure extensions we want enabled
   instance_create_info.ppEnabledExtensionNames = aso_vk_define_extensions(&instance_create_info.enabledExtensionCount);
 
-  aso_log("Enabled Vulkan extensions:\n");
+  LOG("Enabled Vulkan extensions:");
   for (u32 i = 0; i < instance_create_info.enabledExtensionCount; i++) {
-    aso_log(" %s\n", instance_create_info.ppEnabledExtensionNames[i]);
+    LOG(" %s", instance_create_info.ppEnabledExtensionNames[i]);
   }
 
   // REGION: INSTANCE
   // TODO: setup debug message callback
-  ASO_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &ctx->instance), "Failed to create Vulkan instance\n");
+  ASO_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &ctx->instance), "Failed to create Vulkan instance");
 }
 
 VkExtensionProperties* aso_vk_get_available_extensions(aso_arena *scratch, u32 *count) {
-  assert(scratch != NULL);
-  assert(count != NULL);
+  ASSERT(scratch != NULL);
+  ASSERT(count != NULL);
 
-  ASO_VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, NULL), "Failed to get available Vulkan extension count\n");
+  ASO_VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, NULL), "Failed to get available Vulkan extension count");
 
   VkExtensionProperties *extensions = ASO_ARENA_ALLOC_ARRAY(scratch, VkExtensionProperties, *count);
 
-  ASO_VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, extensions), "Failed to enumerate available Vulkan extensions\n");
+  ASO_VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, count, extensions), "Failed to enumerate available Vulkan extensions");
   return extensions;
 }
 
 VkLayerProperties* aso_vk_get_available_layers(aso_arena *scratch, u32 *count) {
-  assert(scratch != NULL);
-  assert(count != NULL);
+  ASSERT(scratch != NULL);
+  ASSERT(count != NULL);
 
-  ASO_VK_CHECK(vkEnumerateInstanceLayerProperties(count, NULL), "Failed to get available Vulkan layer count\n");
+  ASO_VK_CHECK(vkEnumerateInstanceLayerProperties(count, NULL), "Failed to get available Vulkan layer count");
 
   VkLayerProperties *layers = ASO_ARENA_ALLOC_ARRAY(scratch, VkLayerProperties, *count);
 
-  ASO_VK_CHECK(vkEnumerateInstanceLayerProperties(count, layers), "Failed to enumerate available Vulkan layers\n");
+  ASO_VK_CHECK(vkEnumerateInstanceLayerProperties(count, layers), "Failed to enumerate available Vulkan layers");
 
   return layers;
 }
 
 aso_vk_queue_families aso_vk_get_queue_families(aso_arena *scratch, VkPhysicalDevice physical_device, VkSurfaceKHR surface) {
-  assert(scratch != NULL);
+  ASSERT(scratch != NULL);
   aso_vk_queue_families indices = {};
 
   u32 queue_family_count = 0;
@@ -166,12 +165,12 @@ aso_vk_queue_families aso_vk_get_queue_families(aso_arena *scratch, VkPhysicalDe
 
 // currently only adds extensions required by window
 char const * const * aso_vk_define_extensions(u32 *count) {
-  assert(count != NULL);
+  ASSERT(count != NULL);
 
   // get extensions from window framework (currently just SDL)
   char const * const * window_extensions = aso_get_window_vulkan_extensions(count);
   if (window_extensions == NULL) {
-    aso_log("Failed to fetch window Vulkan extensions\n");
+    LOG("Failed to fetch window Vulkan extensions");
     exit(1);
   }
 
@@ -185,7 +184,7 @@ char const * const * aso_vk_define_extensions(u32 *count) {
 
 // currently only adds validation layers
 char const * const * aso_vk_define_layers(u32 *count) {
-  assert(count != NULL);
+  ASSERT(count != NULL);
 
   *count = 0;
   if (aso_vk_enable_validation_layers) {
@@ -217,17 +216,17 @@ bool aso_vk_check_validation_layer_support(VkLayerProperties *available_layers, 
 // REGION: PHYSICAL DEVICE
 
 void aso_vk_select_physical_device(aso_arena *scratch, aso_vk_ctx *ctx) {
-  assert(scratch != NULL);
-  assert(ctx != NULL);
+  ASSERT(scratch != NULL);
+  ASSERT(ctx != NULL);
 
   ctx->physical_device = VK_NULL_HANDLE;
  
-  aso_log("Finding suitable GPU..\n");
+  LOG("Finding suitable GPU..");
   
   u32 device_count = 0;
   vkEnumeratePhysicalDevices(ctx->instance, &device_count, NULL);
   if (device_count == 0) {
-    aso_log("Failed to find any devices supporting Vulkan\n");
+    LOG("Failed to find any devices supporting Vulkan");
     exit(1);
   }
 
@@ -260,13 +259,13 @@ void aso_vk_select_physical_device(aso_arena *scratch, aso_vk_ctx *ctx) {
   }
 
   if (ctx->physical_device == VK_NULL_HANDLE) {
-    aso_log("Failed to find suitable GPU\n");
+    LOG("Failed to find suitable GPU");
   }
 }
 
 bool aso_vk_check_device_extension_support(aso_arena *scratch, VkPhysicalDevice physical_device) {
-  assert(scratch != NULL);
-  assert(physical_device != NULL);
+  ASSERT(scratch != NULL);
+  ASSERT(physical_device != NULL);
 
   u32 extension_count;
   vkEnumerateDeviceExtensionProperties(physical_device, NULL, &extension_count, NULL);
@@ -284,7 +283,7 @@ bool aso_vk_check_device_extension_support(aso_arena *scratch, VkPhysicalDevice 
       }
     }
     if (!found) {
-      aso_log(" Missing support for %s\n", aso_vulkan_device_extensions[i]);
+      LOG(" Missing support for %s", aso_vulkan_device_extensions[i]);
       return false;
     }
   }
@@ -293,8 +292,8 @@ bool aso_vk_check_device_extension_support(aso_arena *scratch, VkPhysicalDevice 
 }
 
 aso_vk_surface_details aso_vk_get_surface_details(VkPhysicalDevice physical_device, VkSurfaceKHR surface) {
-  assert(physical_device != NULL);
-  assert(surface != NULL);
+  ASSERT(physical_device != NULL);
+  ASSERT(surface != NULL);
 
   aso_vk_surface_details details = {
     .formats_count = ASO_VK_MAX_SURFACE_FORMATS,
@@ -304,17 +303,17 @@ aso_vk_surface_details aso_vk_get_surface_details(VkPhysicalDevice physical_devi
   // formats
   //vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &details.formats_count, NULL);
   VkResult result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &details.formats_count, details.formats);
-  assert (result == VK_SUCCESS || result == VK_INCOMPLETE);
+  ASSERT (result == VK_SUCCESS || result == VK_INCOMPLETE);
   if (result == VK_INCOMPLETE) {
-    aso_log("Too many surface formats (%u > %u)\n", details.formats_count, ASO_VK_MAX_SURFACE_FORMATS);
+    LOG("Too many surface formats (%u > %u)", details.formats_count, ASO_VK_MAX_SURFACE_FORMATS);
   }
 
   // present modes
   //vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &details.present_modes_count, NULL);
   result = vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &details.present_modes_count, details.present_modes);
-  assert (result == VK_SUCCESS || result == VK_INCOMPLETE);
+  ASSERT (result == VK_SUCCESS || result == VK_INCOMPLETE);
   if (result == VK_INCOMPLETE) {
-    aso_log("Too many present modes (%u > %u)\n", details.present_modes_count, ASO_VK_MAX_PRESENT_MODES);
+    LOG("Too many present modes (%u > %u)", details.present_modes_count, ASO_VK_MAX_PRESENT_MODES);
   }
   return details;
 }
@@ -323,7 +322,7 @@ aso_vk_surface_details aso_vk_get_surface_details(VkPhysicalDevice physical_devi
 // REGION: LOGICAL DEVICE
 
 void aso_vk_create_logical_device(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   // use a bitmap to produce an array of unique VkDeviceQueueCreateInfo
   // NOTE: max 8 unique queue families
@@ -366,7 +365,7 @@ void aso_vk_create_logical_device(aso_vk_ctx *ctx) {
     device_create_info.enabledLayerCount = 0;
   }
 
-  ASO_VK_CHECK(vkCreateDevice(ctx->physical_device, &device_create_info, NULL, &ctx->device), "Failed to create logical device\n");
+  ASO_VK_CHECK(vkCreateDevice(ctx->physical_device, &device_create_info, NULL, &ctx->device), "Failed to create logical device");
 
   vkGetDeviceQueue(ctx->device, ctx->queue_families.graphics_family, 0, &ctx->graphics_queue);
   vkGetDeviceQueue(ctx->device, ctx->queue_families.present_family, 0, &ctx->presentation_queue);
@@ -375,9 +374,9 @@ void aso_vk_create_logical_device(aso_vk_ctx *ctx) {
 // REGION: SWAP CHAIN
 
 void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
-  aso_log("\nCreating swap chain..\n");
+  LOG("Creating swap chain..");
 
   //aso_vk_surface_details details = aso_vk_get_surface_detais(scratch, ctx, ctx->physical_device);
   VkSurfaceCapabilitiesKHR capabilities = {};
@@ -405,7 +404,7 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
   
   // extent
   VkExtent2D extent = aso_vk_get_swap_extent(capabilities);
-  aso_log(" Extent: %d x %d\n", extent.width, extent.height);
+  LOG(" Extent: %d x %d", extent.width, extent.height);
 
   u32 image_count = capabilities.minImageCount + 1;
   if (capabilities.maxImageCount > 0 && image_count > capabilities.maxImageCount) {
@@ -440,14 +439,14 @@ void aso_vk_create_swap_chain(aso_vk_ctx *ctx) {
   create_info.clipped = VK_TRUE;
   create_info.oldSwapchain = VK_NULL_HANDLE;
 
-  ASO_VK_CHECK(vkCreateSwapchainKHR(ctx->device, &create_info, NULL, &ctx->swap_chain), "Failed to create swap chain\n");
+  ASO_VK_CHECK(vkCreateSwapchainKHR(ctx->device, &create_info, NULL, &ctx->swap_chain), "Failed to create swap chain");
 
   // retrieve swap chain image handles
   // we store in fixed sized arrays so we need to check the count
   u32 image_handle_count = 0;
   vkGetSwapchainImagesKHR(ctx->device, ctx->swap_chain, &image_handle_count, NULL);
   if (image_handle_count > ASO_VK_SWAP_CHAIN_MAX_IMAGES) {
-    aso_log("Swap chain allocated too many images (%u > %u)\n", image_handle_count, ASO_VK_SWAP_CHAIN_MAX_IMAGES);
+    LOG("Swap chain allocated too many images (%u > %u)", image_handle_count, ASO_VK_SWAP_CHAIN_MAX_IMAGES);
     exit(1);
   }
   ctx->swap_chain_images_count = image_handle_count;
@@ -467,7 +466,7 @@ VkExtent2D aso_vk_get_swap_extent(VkSurfaceCapabilitiesKHR capabilities) {
   } else {
     int width, height;
     aso_get_window_size(&g_ctx->window, &width, &height);
-    aso_log("Window extent: %dx%d\n", width, height);
+    LOG("Window extent: %dx%d", width, height);
     VkExtent2D extent = {
       CLAMP((u32)width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
       CLAMP((u32)height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
@@ -478,7 +477,7 @@ VkExtent2D aso_vk_get_swap_extent(VkSurfaceCapabilitiesKHR capabilities) {
 }
 
 void aso_vk_recreate_swap_chain(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   // check if the window is minimized
   int width, heigth;
@@ -498,7 +497,7 @@ void aso_vk_recreate_swap_chain(aso_vk_ctx *ctx) {
 }
 
 void aso_vk_cleanup_swap_chain(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   // framebuffers
   for (size_t i = 0; i < ctx->swap_chain_framebuffers_count; i++) {
@@ -543,8 +542,8 @@ void aso_vk_create_image_views(aso_vk_ctx *ctx) {
 // REGION: GRAPHICS PIPELINE
 
 void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
-  assert(scratch != NULL);
+  ASSERT(ctx != NULL);
+  ASSERT(scratch != NULL);
 
   // load shader bytecode into shader modules
   size_t vert_shader_code_size = 0;
@@ -660,7 +659,7 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_ctx *ctx) {
   pipeline_layout_info.pushConstantRangeCount = 0; // optional
   pipeline_layout_info.pPushConstantRanges = NULL; // optional
 
-  ASO_VK_CHECK(vkCreatePipelineLayout(ctx->device, &pipeline_layout_info, NULL, &ctx->pipeline_layout), "Failed to create pipeline layout\n");
+  ASO_VK_CHECK(vkCreatePipelineLayout(ctx->device, &pipeline_layout_info, NULL, &ctx->pipeline_layout), "Failed to create pipeline layout");
 
   VkGraphicsPipelineCreateInfo pipeline_info = {};
   pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -684,7 +683,7 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_ctx *ctx) {
   pipeline_info.basePipelineHandle = VK_NULL_HANDLE; // optional
   pipeline_info.basePipelineIndex = -1; // optional
  
-  ASO_VK_CHECK(vkCreateGraphicsPipelines(ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &ctx->graphics_pipeline), "Failed to create graphics pipeline\n");
+  ASO_VK_CHECK(vkCreateGraphicsPipelines(ctx->device, VK_NULL_HANDLE, 1, &pipeline_info, NULL, &ctx->graphics_pipeline), "Failed to create graphics pipeline");
 
   vkDestroyShaderModule(ctx->device, frag_shader_module, NULL);
   vkDestroyShaderModule(ctx->device, vert_shader_module, NULL);
@@ -696,14 +695,14 @@ VkShaderModule aso_vk_create_shader_module(VkDevice device, u8 *shader_code, siz
   create_info.codeSize = code_size;
   create_info.pCode = (const u32 *)shader_code;
   VkShaderModule module;
-  ASO_VK_CHECK(vkCreateShaderModule(device, &create_info, NULL, &module), "Failed to create shader module\n");
+  ASO_VK_CHECK(vkCreateShaderModule(device, &create_info, NULL, &module), "Failed to create shader module");
   return module;
 }
 
 // REGION: RENDER PASS
 
 void aso_vk_create_render_pass(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   VkAttachmentDescription color_attachment = {};
   color_attachment.format = ctx->swap_chain_format;
@@ -744,13 +743,13 @@ void aso_vk_create_render_pass(aso_vk_ctx *ctx) {
   render_pass_info.dependencyCount = 1;
   render_pass_info.pDependencies = &dependency;
 
-  ASO_VK_CHECK(vkCreateRenderPass(ctx->device, &render_pass_info, NULL, &ctx->render_pass), "Failed to create render pass\n");
+  ASO_VK_CHECK(vkCreateRenderPass(ctx->device, &render_pass_info, NULL, &ctx->render_pass), "Failed to create render pass");
 }
 
 // REGION: FRAMEBUFFERS
 
 void aso_vk_create_framebuffers(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   // we create a framebuffer for each imageview in the swap chain
 
@@ -769,14 +768,14 @@ void aso_vk_create_framebuffers(aso_vk_ctx *ctx) {
     framebuffer_info.height = ctx->swap_chain_extent.height;
     framebuffer_info.layers = 1;
 
-    ASO_VK_CHECK(vkCreateFramebuffer(ctx->device, &framebuffer_info, NULL, &ctx->swap_chain_framebuffers[i]), "Failed to create framebuffer\n");
+    ASO_VK_CHECK(vkCreateFramebuffer(ctx->device, &framebuffer_info, NULL, &ctx->swap_chain_framebuffers[i]), "Failed to create framebuffer");
   }
 }
 
 // REGION: COMMAND POOL
 
 void aso_vk_create_command_pool(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
 
   VkCommandPoolCreateInfo pool_info = {};
@@ -784,13 +783,13 @@ void aso_vk_create_command_pool(aso_vk_ctx *ctx) {
   pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // reset command buffers every frame
   pool_info.queueFamilyIndex = ctx->queue_families.graphics_family;
 
-  ASO_VK_CHECK(vkCreateCommandPool(ctx->device, &pool_info, NULL, &ctx->command_pool), "Failed to create command pool\n");
+  ASO_VK_CHECK(vkCreateCommandPool(ctx->device, &pool_info, NULL, &ctx->command_pool), "Failed to create command pool");
 }
 
 // REGION: COMMAND BUFFER
 
 void aso_vk_create_command_buffers(aso_vk_ctx *ctx) {
-  assert (ctx != NULL);
+  ASSERT (ctx != NULL);
   
   VkCommandBufferAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -798,11 +797,11 @@ void aso_vk_create_command_buffers(aso_vk_ctx *ctx) {
   alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   alloc_info.commandBufferCount = ASO_VK_FRAMES_IN_FLIGHT;
 
-  ASO_VK_CHECK(vkAllocateCommandBuffers(ctx->device, &alloc_info, ctx->command_buffers), "Failed to allocate command buffers\n");
+  ASO_VK_CHECK(vkAllocateCommandBuffers(ctx->device, &alloc_info, ctx->command_buffers), "Failed to allocate command buffers");
 }
 
 void aso_vk_record_command_buffer(aso_vk_ctx *ctx, u32 image_index) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   u32 f = ctx->frame;
 
@@ -813,7 +812,7 @@ void aso_vk_record_command_buffer(aso_vk_ctx *ctx, u32 image_index) {
   begin_info.flags = 0; // optional
   begin_info.pInheritanceInfo = NULL; // optional
 
-  ASO_VK_CHECK(vkBeginCommandBuffer(ctx->command_buffers[f], &begin_info), "Failed to begin recording command buffer\n");
+  ASO_VK_CHECK(vkBeginCommandBuffer(ctx->command_buffers[f], &begin_info), "Failed to begin recording command buffer");
 
   // start render pass
 
@@ -856,11 +855,11 @@ void aso_vk_record_command_buffer(aso_vk_ctx *ctx, u32 image_index) {
 
   vkCmdEndRenderPass(ctx->command_buffers[f]);
 
-  ASO_VK_CHECK(vkEndCommandBuffer(ctx->command_buffers[f]), "Failed to record command buffer\n");
+  ASO_VK_CHECK(vkEndCommandBuffer(ctx->command_buffers[f]), "Failed to record command buffer");
 }
 
 void aso_vk_create_sync_objects(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
   
   VkSemaphoreCreateInfo semaphore_info = {};
   semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -870,22 +869,22 @@ void aso_vk_create_sync_objects(aso_vk_ctx *ctx) {
   fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT; // start signaled so we dont block forever on first frame
 
   for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
-    ASO_VK_CHECK(vkCreateSemaphore(ctx->device, &semaphore_info, NULL, &ctx->image_available_semaphores[i]), "Failed to create semaphore\n");
-    ASO_VK_CHECK(vkCreateFence(ctx->device, &fence_info, NULL, &ctx->in_flight_fences[i]), "Failed to create fence\n");
+    ASO_VK_CHECK(vkCreateSemaphore(ctx->device, &semaphore_info, NULL, &ctx->image_available_semaphores[i]), "Failed to create semaphore");
+    ASO_VK_CHECK(vkCreateFence(ctx->device, &fence_info, NULL, &ctx->in_flight_fences[i]), "Failed to create fence");
   }
   // one render_finished_semaphore per image
   // when we get an image back from the swap chain, we are implicitly guaranteed that
   // the presentation engine has completed the work and the semaphore can be reused
   // https://docs.vulkan.org/guide/latest/swapchain_semaphore_reuse.html
   for (size_t i = 0; i < ASO_VK_SWAP_CHAIN_MAX_IMAGES; i++) {
-    ASO_VK_CHECK(vkCreateSemaphore(ctx->device, &semaphore_info, NULL, &ctx->render_finished_semaphores[i]), "Failed to create semaphore\n");
+    ASO_VK_CHECK(vkCreateSemaphore(ctx->device, &semaphore_info, NULL, &ctx->render_finished_semaphores[i]), "Failed to create semaphore");
   }
 }
 
 // REGION: DRAW FRAME
 
 void aso_vk_draw_frame(aso_vk_ctx *ctx) {
-  assert(ctx != NULL);
+  ASSERT(ctx != NULL);
 
   u32 f = ctx->frame;
 
@@ -901,7 +900,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
       image_acquire_result == VK_SUBOPTIMAL_KHR ||
       ctx->window_resized) {
     ctx->window_resized = false;
-    aso_log("Swap chain image out of date or resized when acquiring image\n");
+    LOG("Swap chain image out of date or resized when acquiring image");
 
     aso_vk_recreate_swap_chain(ctx);
     // need to recreate tainted semaphore
@@ -912,7 +911,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
 
     return;
   } else if (image_acquire_result != VK_SUCCESS) {
-    aso_log("Failed to acquire swap chain image\n");
+    LOG("Failed to acquire swap chain image");
     exit(1);
   }
 
@@ -939,7 +938,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = signal_semaphores;
 
-  ASO_VK_CHECK(vkQueueSubmit(ctx->graphics_queue, 1, &submit_info, ctx->in_flight_fences[f]), "Failed to submit draw command buffer\n");
+  ASO_VK_CHECK(vkQueueSubmit(ctx->graphics_queue, 1, &submit_info, ctx->in_flight_fences[f]), "Failed to submit draw command buffer");
 
   VkPresentInfoKHR present_info = {};
   present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -957,11 +956,11 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
       present_result == VK_SUBOPTIMAL_KHR ||
       ctx->window_resized) {
-    aso_log("Swap chain image out of date when presenting\n");
+    LOG("Swap chain image out of date when presenting");
     ctx->window_resized = false;
     aso_vk_recreate_swap_chain(ctx);
   } else if (present_result != VK_SUCCESS) {
-    aso_log("Failed to acquire swap chain image\n");
+    LOG("Failed to acquire swap chain image");
   }
 
   ctx->frame = (f + 1) % ASO_VK_FRAMES_IN_FLIGHT;
