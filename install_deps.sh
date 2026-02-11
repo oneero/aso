@@ -25,6 +25,7 @@ packages=(
   # Build tools
   cmake
   gcc
+  clang
   ninja
   pkg-config
 
