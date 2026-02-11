@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#ifdef OS_WINDOWS
+#if OS_WINDOWS
 #include <windows.h>
 #else
 #include <sys/mman.h>
@@ -21,7 +21,7 @@ uintptr_t aso_align_forward(uintptr_t ptr, size_t align) {
 static size_t aso_get_os_page_size(void) {
   static size_t aso_os_page_size = 0;
   if (aso_os_page_size == 0) {
-#ifdef _WIN32
+#if OS_WINDOWS
     SYSTEM_INFO si;
     GetSystemInfo(&si);
     aso_os_page_size = si.dwPageSize;
@@ -37,7 +37,7 @@ static size_t aso_get_os_page_size(void) {
 // also allocate the first page for embedding the aso_arena instance
 aso_arena* aso_arena_create(void) {
   size_t page_size = aso_get_os_page_size();
-#ifdef _WIN32
+#if OS_WINDOWS
   void *region = VirtualAlloc(NULL, ASO_ARENA_RESERVE_SIZE, MEM_RESERVE, PAGE_NOACCESS);
   if (!region) {
     return NULL;
@@ -63,7 +63,7 @@ aso_arena* aso_arena_create(void) {
   arena->size = page_size;
   arena->offset = aso_align_forward(sizeof(aso_arena), 16);
 
-#ifdef ASO_ARENA_DEBUG
+#ifdef _ASO_DEBUG_ARENA
   arena->alloc_count = 0;
   arena->alloc_total = 0;
   arena->peak = arena->offset;
@@ -98,7 +98,7 @@ void* aso_arena_alloc(aso_arena *arena, size_t size, size_t align) {
     size_t needed = new_size - arena->size;
     void* start = arena->base + arena->size;
 
-#ifdef _WIN32
+#if OS_WINDOWS
     if (!VirtualAlloc(start, needed, MEM_COMMIT, PAGE_READWRITE)) {
       return NULL;
     }
@@ -116,11 +116,11 @@ void* aso_arena_alloc(aso_arena *arena, size_t size, size_t align) {
 
   // TODO: always set to 0?
 
-#ifdef ASO_ARENA_DEBUG 
+#ifdef _ASO_DEBUG_ARENA
   arena->alloc_count++;
   arena->alloc_total += size; // use offset instead?
   arena->peak = MAX(arena->peak, arena->offset);
-  LOG("[arena %p] alloc #%zu: %zu bytes @ %p (usage: %zu / %zu)", (void *)arena, arena->alloc_count, size, memory, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->size);
+  A_LOG("[arena %p] alloc #%zu: %zu bytes @ %p (usage: %zu / %zu)", (void *)arena, arena->alloc_count, size, memory, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->size);
 
 #endif
 
@@ -129,8 +129,8 @@ void* aso_arena_alloc(aso_arena *arena, size_t size, size_t align) {
 
 void aso_arena_free(aso_arena *arena) {
   ASSERT(arena != NULL);
-#ifdef ASO_ARENA_DEBUG
-  fprintf(stderr, "[arena %p] reset: freed %zu bytes from %zu allocations", (void*)arena, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->alloc_count);
+#ifdef _ASO_DEBUG_ARENA
+  A_LOG("[arena %p] reset: freed %zu bytes from %zu allocations", (void*)arena, arena->offset - aso_align_forward(sizeof(aso_arena), 16), arena->alloc_count);
   arena->alloc_count = 0;
   arena->alloc_total = 0;
 #endif
@@ -139,7 +139,7 @@ void aso_arena_free(aso_arena *arena) {
 
 void aso_arena_destroy(aso_arena *arena) {
   ASSERT(arena != NULL);
-#ifdef _WIN32
+#if OS_WINDOWS
   VirtualFree(arena->base, 0, MEM_RELEASE);
 #else
   munmap(arena->base, ASO_ARENA_RESERVE_SIZE);

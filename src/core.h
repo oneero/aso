@@ -129,7 +129,7 @@ typedef float f32;
       })
 
 // stripped
-#if BUILD_DEBUG
+#ifdef BUILD_DEBUG
   #define D_ASSERT(expr) ASSERT(expr)
 #else
   #define D_ASSERT(expr) ((void)0)
@@ -137,9 +137,15 @@ typedef float f32;
 
 // REGION: LOGGING
 
-#define LOG(fmt, ...)        fprintf(stdout, fmt "\n" __VA_OPT__(,) __VA_ARGS__)
-#define LOG_ERROR(fmt, ...)  fprintf(stderr, "[ERROR] %s:%d: " fmt "\n", __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
-#define LogWarning(fmt, ...) fprintf(stderr, "[WARN]  %s:%d: " fmt "\n", __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+#define LOG(fmt, ...)         fprintf(stdout, fmt "\n" __VA_OPT__(, ) __VA_ARGS__)
+#define LOG_ERROR(fmt, ...)   fprintf(stderr, "[ERROR] %s:%d: " fmt "\n", __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)
+#define LOG_WARNING(fmt, ...) fprintf(stderr, "[WARN]  %s:%d: " fmt "\n", __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)
+
+#ifdef BUILD_DEBUG
+  #define D_LOG(fmt, ...)     fprintf(stdout, "[D]" fmt "\n" __VA_OPT__(, ) __VA_ARGS__)
+#else
+  #define D_LOG(fmt, ...)     ((void)0)
+#endif
 
 // REGION: UTILITY / MATH
 

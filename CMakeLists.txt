@@ -11,11 +11,16 @@ project(aso
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(DEBUG_ARENA "Arena debugging" ON)
 option(USE_SANITIZERS "ASan/UBSan" ON)
 option(USE_VALGRIND "Valgrind" OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+if(DEBUG_ARENA)
+  add_compile_definitions(ASO_DEBUG_ARENA)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
