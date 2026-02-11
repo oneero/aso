@@ -45,8 +45,7 @@ void aso_window_show(aso_window *window) {
 }
 
 void aso_get_window_size(aso_window *window, int *width, int *height) {
-  // TODO: check if we should use SDL_GetWindowSizeInPixels() instead?
-  SDL_GetWindowSize(window->handle, width, height);
+  SDL_GetWindowSizeInPixels(window->handle, width, height);
 }
 
 char const * const * aso_get_window_vulkan_extensions(u32 *count) {
