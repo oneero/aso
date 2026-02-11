@@ -1,6 +1,6 @@
 #include "aso.h"
 
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
 extern "C" const char *__lsan_default_suppressions() {
   return "leak:<unknown module>\n";
 }

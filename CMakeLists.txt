@@ -14,24 +14,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(USE_SANITIZERS "ASan/UBSan" ON)
 option(USE_VALGRIND "Valgrind" OFF)
 
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
-
-if(USE_VALGRIND)
-    set(USE_SANITIZERS OFF)
-    message(STATUS "Valgrind build: sanitizers disabled")
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-if(USE_SANITIZERS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
-    message(STATUS "Sanitizers enabled")
-endif()
 
 find_package(Vulkan REQUIRED)
 find_package(SDL3 REQUIRED)
 
-add_compile_definitions(ASO_VK_VALIDATION_LAYERS)
 
 add_executable(aso
     src/main.cpp
@@ -43,6 +33,31 @@ add_executable(aso
     src/io.cpp
 )
 
-#add_executable(aso src/simple.cpp)
+target_compile_definitions(aso PRIVATE ASO_VK_VALIDATION_LAYERS)
+
+target_compile_options(aso PRIVATE
+  -Wall
+  -Wextra
+  -Wpedantic
+  -Wconversion
+  -Wshadow
+  -Wno-unused-parameter
+  -Werror
+  -fno-exceptions
+  -fno-rtti
+)
+
+if(USE_VALGRIND)
+  set(USE_SANITIZERS OFF)
+  message(STATUS "Valgrind build: sanitizers disabled")
+endif()
+
+if(USE_SANITIZERS)
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
+    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address -fsanitize=undefined")
+    target_compile_options(aso PRIVATE -fsanitize=address -fsanitize=undefined)
+    target_link_options(aso PRIVATE -fsanitize=address -fsanitize=undefined)
+    message(STATUS "Sanitizers enabled")
+endif()
 
 target_link_libraries(aso PRIVATE Vulkan::Vulkan SDL3::SDL3)
