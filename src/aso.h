@@ -1,7 +1,7 @@
 #ifndef ASO_H
 #define ASO_H
 
-#include "gfx.h"
+#include "gpu.h"
 #include "input.h"
 #include "window.h"
 #include "mem.h"

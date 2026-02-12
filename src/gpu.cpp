@@ -4,8 +4,9 @@
 #include <vulkan/vulkan_core.h>
 
 #include "aso.h"
-#include "core.h"
-#include "gfx.h"
+#include "base.h"
+#include "math.h"
+#include "gpu.h"
 #include "mem.h"
 #include "window.h"
 #include "io.h"

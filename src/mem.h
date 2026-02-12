@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "core.h"
+#include "base.h"
 
 #if defined BUILD_DEBUG && defined ASO_DEBUG_ARENA
   #define _ASO_DEBUG_ARENA

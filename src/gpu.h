@@ -1,10 +1,11 @@
-#ifndef ASO_GFX_H
-#define ASO_GFX_H
+#ifndef ASO_GPU_H
+#define ASO_GPU_H
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
-#include "core.h"
+#include "base.h"
+#include "math.h"
 #include "mem.h"
 
 #ifdef ASO_VK_VALIDATION_LAYERS
@@ -19,6 +20,11 @@ static bool aso_vk_enable_validation_layers = false;
 #define ASO_VK_SWAP_CHAIN_MAX_IMAGES 4
 #define ASO_VK_MAX_SURFACE_FORMATS 32
 #define ASO_VK_MAX_PRESENT_MODES 8
+
+struct aso_vertex {
+  v2f32 pos;
+  v3f32 color;
+};
 
 struct aso_vk_queue_families
 {
@@ -116,6 +122,9 @@ void                      aso_vk_create_command_buffers(aso_vk_ctx *ctx);
 void                      aso_vk_record_command_buffer(aso_vk_ctx *ctx, u32 image_index);
 void                      aso_vk_create_sync_objects(aso_vk_ctx *ctx);
 
+VkVertexInputBindingDescription aso_vk_get_vertex_binding_desc(void);
+
+
 // REGION: HELPER MACROS
 
 // performs call and compares result with expected (defaults to VK_SUCCESS)
@@ -133,4 +142,4 @@ void                      aso_vk_create_sync_objects(aso_vk_ctx *ctx);
     }                                                             \
   )
 
-#endif // ASO_GFX_H
+#endif // ASO_GPU_H

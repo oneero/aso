@@ -1,6 +1,6 @@
 #include "aso.h"
-#include "core.h"
-#include "gfx.h"
+#include "base.h"
+#include "gpu.h"
 #include "input.h"
 #include "mem.h"
 #include "window.h"

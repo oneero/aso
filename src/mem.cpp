@@ -10,7 +10,7 @@
 #include <unistd.h>
 #endif
 
-#include "core.h"
+#include "base.h"
 #include "mem.h"
 
 uintptr_t aso_align_forward(uintptr_t ptr, size_t align) {

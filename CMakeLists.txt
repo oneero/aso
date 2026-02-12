@@ -37,7 +37,7 @@ add_executable(aso
     src/aso.cpp
     src/window.cpp
     src/input.cpp
-    src/gfx.cpp
+    src/gpu.cpp
     src/mem.cpp
     src/io.cpp
 )
@@ -50,11 +50,12 @@ target_compile_options(aso PRIVATE
   -Wpedantic
   -Wconversion
   -Wshadow
-  -Wno-unused-parameter
-  -Wno-missing-designated-field-initializers
   -Werror
   -fno-exceptions
   -fno-rtti
+  -Wno-unused-parameter
+  -Wno-missing-designated-field-initializers
+  -Wno-gnu-anonymous-struct
 )
 
 if(USE_VALGRIND)

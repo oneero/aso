@@ -3,8 +3,8 @@
 
 // Currently wraps SDL3
 
-#include "core.h"
-#include "gfx.h"
+#include "base.h"
+#include "gpu.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 

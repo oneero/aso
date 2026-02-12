@@ -1,5 +1,5 @@
-#ifndef ASO_CORE_H
-#define ASO_CORE_H
+#ifndef ASO_BASE_H
+#define ASO_BASE_H
 
 #include <cstdint>
 #include <cstdio>
@@ -147,17 +147,10 @@ typedef float f32;
   #define D_LOG(fmt, ...)     ((void)0)
 #endif
 
-// REGION: UTILITY / MATH
+// REGION: UTILITY
 
 #define KB(n) ((n) * 1024ull)
 #define MB(n) (KB(n) * 1024ull)
 #define GB(n) (MB(n) * 1024ull)
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define CLAMP(value, low, high) (MAX(low, MIN(value, high)))
-#define ABS(x) ((x) < 0 ? -(x) : (x))
-#define SIGN(x) ((x) > 0 ? 1 : ((x) < 0 ? -1 : 0))
-#define SQUARE(x) ((x) * (x))
-
-#endif // ASO_CORE_H
+#endif // ASO_BASE_H
