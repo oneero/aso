@@ -1,16 +1,16 @@
-aso is two things:
+**aso**
 - a playground/sandbox for running, visualizing and playing with algorithms on GPUs.
 - a learning platform for myself.
 
-The idea is to create a new tool/toy for myself and learn new things along the way.
+Interactive real-time simulations powered by GPU compute. Cellular automata, physarum, boids, alife. The idea is to create a new tool/toy for myself and learn new things along the way.
 
-# State
+## State
 
 aso is very early in its development.
 
 Initially aso will simply be a re-implementation of my previous compute shader sandbox, which was built on top of [bgfx](https://github.com/bkaradzic/bgfx). This time I will be using Vulkan and SDL3 in order to learn new things and hone old skills.
 
-# Roadmap
+## Roadmap
 
 - [x] triangle
 - [ ] textured quad with necessary shader buffers
@@ -21,13 +21,13 @@ Initially aso will simply be a re-implementation of my previous compute shader s
 - [ ] hot reloads and file watching
 - [ ] algorithm exploration tools
 
-# Running
+## Running
 
 Linux is currently the main target platform and the only one I am testing on. I will try to support Windows as well and have it tested when the project matures. Possible MacOS support will be explored later.
 
 Currently the only way to run is to build it from source. See below.
 
-# Development
+## Development
 
 You can replicate my arch-based development environment with the install_deps.sh script or adapt it for your environment.
 
@@ -41,6 +41,6 @@ distrobox enter aso-dev
 ./install_deps.sh
 ```
 
-# Contributions
+## Contributions
 
 The project is too early in development for me to consider accepting any contributions.
