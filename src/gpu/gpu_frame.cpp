@@ -36,11 +36,9 @@ void aso_vk_create_command_buffers(aso_vk_frame *frame, const aso_vk_device *dev
   ASO_VK_CHECK(vkAllocateCommandBuffers(device->device, &alloc_info, frame->command_buffers), "Failed to allocate command buffers");
 }
 
-void aso_vk_record_command_buffer(aso_vk_frame *frame, const aso_vk_swapchain *swapchain, const aso_vk_pipeline *pipeline, u32 image_index) {
-  ASSERT(frame != NULL);
+void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain *swapchain, const aso_vk_pipeline *pipeline, u32 image_index) {
+  ASSERT(buffer != NULL);
   ASSERT(swapchain != NULL);
-
-  u32 f = frame->current;
 
   // begin
 
@@ -49,7 +47,7 @@ void aso_vk_record_command_buffer(aso_vk_frame *frame, const aso_vk_swapchain *s
   begin_info.flags = 0; // optional
   begin_info.pInheritanceInfo = NULL; // optional
 
-  ASO_VK_CHECK(vkBeginCommandBuffer(frame->command_buffers[f], &begin_info), "Failed to begin recording command buffer");
+  ASO_VK_CHECK(vkBeginCommandBuffer(buffer, &begin_info), "Failed to begin recording command buffer");
 
   // start render pass
 
@@ -64,11 +62,11 @@ void aso_vk_record_command_buffer(aso_vk_frame *frame, const aso_vk_swapchain *s
   render_pass_info.clearValueCount = 1;
   render_pass_info.pClearValues = &clear_color;
 
-  vkCmdBeginRenderPass(frame->command_buffers[f], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
   // bind pipeline
 
-  vkCmdBindPipeline(frame->command_buffers[f], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphics_pipeline);
+  vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphics_pipeline);
 
   // define viewport and scissor as they were set to dynamic
 
@@ -79,20 +77,20 @@ void aso_vk_record_command_buffer(aso_vk_frame *frame, const aso_vk_swapchain *s
   viewport.height = (float) swapchain->extent.height;
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(frame->command_buffers[f], 0, 1, &viewport);
+  vkCmdSetViewport(buffer, 0, 1, &viewport);
 
   VkRect2D scissor = {};
   scissor.offset = {0, 0};
   scissor.extent = swapchain->extent;
-  vkCmdSetScissor(frame->command_buffers[f], 0, 1, &scissor);
+  vkCmdSetScissor(buffer, 0, 1, &scissor);
 
   // draw!
 
-  vkCmdDraw(frame->command_buffers[f], 3, 1, 0, 0);
+  vkCmdDraw(buffer, 3, 1, 0, 0);
 
-  vkCmdEndRenderPass(frame->command_buffers[f]);
+  vkCmdEndRenderPass(buffer);
 
-  ASO_VK_CHECK(vkEndCommandBuffer(frame->command_buffers[f]), "Failed to record command buffer");
+  ASO_VK_CHECK(vkEndCommandBuffer(buffer), "Failed to record command buffer");
 }
 
 void aso_vk_create_sync_objects(aso_vk_frame *frame, const aso_vk_device *device) {
