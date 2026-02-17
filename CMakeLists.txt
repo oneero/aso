@@ -37,10 +37,16 @@ add_executable(aso
     src/aso.cpp
     src/window.cpp
     src/input.cpp
-    src/gpu.cpp
     src/mem.cpp
     src/io.cpp
+    src/gpu/gpu.cpp
+    src/gpu/gpu_device.cpp
+    src/gpu/gpu_swapchain.cpp
+    src/gpu/gpu_pipeline.cpp
+    src/gpu/gpu_frame.cpp
 )
+
+target_include_directories(aso PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 target_compile_definitions(aso PRIVATE ASO_VK_VALIDATION_LAYERS)
 

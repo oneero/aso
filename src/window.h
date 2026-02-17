@@ -4,7 +4,7 @@
 // Currently wraps SDL3
 
 #include "base.h"
-#include "gpu.h"
+#include "gpu/gpu.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>
 
