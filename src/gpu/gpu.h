@@ -51,7 +51,7 @@ VkVertexInputBindingDescription aso_vk_get_vertex_binding_desc(void);
               " %s\n"                                             \
               " %s:%d: %s != %s (got %d)\n",                      \
               msg, __FILE__, __LINE__, #call, #expected, result); \
-      DEBUG_TRAP;                                                 \
+      DEBUG_TRAP();                                               \
     }                                                             \
   )
 

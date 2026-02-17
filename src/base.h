@@ -2,7 +2,6 @@
 #define ASO_BASE_H
 
 #include <cstdint>
-#include <cstdio>
 
 // REGION: COMPILER
 
@@ -87,13 +86,13 @@
 
 // REGION: TYPES
 
-typedef int8_t i8;
-typedef int32_t i32;
-typedef int64_t i64;
-typedef uint8_t u8;
+typedef int8_t   i8;
+typedef int32_t  i32;
+typedef int64_t  i64;
+typedef uint8_t  u8;
 typedef uint32_t u32;
 typedef uint64_t u64;
-typedef float f32;
+typedef float    f32;
 
 // REGION: MACROS
 
@@ -103,20 +102,20 @@ typedef float f32;
 
 // trap
 #if COMPILER_MSVC
-  #define DEBUG_TRAP __debugbreak()
+  #define DEBUG_TRAP() __debugbreak()
 #elif COMPILER_CLANG
-  #define DEBUG_TRAP __builtin_debugtrap()
+  #define DEBUG_TRAP() __builtin_debugtrap()
 #elif COMPILER_GCC
   // GCC doesn't have __builtin_debugtrap, so:
   #if ARCH_X64
-    #define DEBUG_TRAP __asm__ __volatile__("int3")
+    #define DEBUG_TRAP() __asm__ __volatile__("int3")
   #elif ARCH_ARM64
-    #define DEBUG_TRAP __asm__ __volatile__("brk #0xf000")
+    #define DEBUG_TRAP() __asm__ __volatile__("brk #0xf000")
   #else
-    #define DEBUG_TRAP __builtin_trap()  // Last resort on GCC
+    #define DEBUG_TRAP() __builtin_trap()  // Last resort on GCC
   #endif
 #else
-  #define DEBUG_TRAP (*(volatile int*)0 = 0)
+  #define DEBUG_TRAP() (*(volatile int*)0 = 0)
 #endif
 
 // never stripped
@@ -125,7 +124,16 @@ typedef float f32;
       if (!(expr)) {                                   \
         fprintf(stderr, "ASSERT FAILED: %s\n %s:%d\n", \
                 #expr, __FILE__, __LINE__);            \
-        DEBUG_TRAP;                                    \
+        DEBUG_TRAP();                                  \
+      })
+
+// never stripped
+#define ASSERT_MSG(expr, fmt, ...)                                      \
+  STMNT(                                                                \
+      if (!(expr)) {                                                    \
+        fprintf(stderr, "ASSERT FAILED: %s\n " fmt "\n %s:%d\n",        \
+                #expr __VA_OPT__(, ) __VA_ARGS__, __FILE__, __LINE__); \
+        DEBUG_TRAP();                                                   \
       })
 
 // stripped
@@ -142,7 +150,7 @@ typedef float f32;
 #define LOG_WARNING(fmt, ...) fprintf(stderr, "[WARN]  %s:%d: " fmt "\n", __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)
 
 #ifdef BUILD_DEBUG
-  #define D_LOG(fmt, ...)     fprintf(stdout, "[D]" fmt "\n" __VA_OPT__(, ) __VA_ARGS__)
+  #define D_LOG(fmt, ...)     fprintf(stdout, "[D] " fmt "\n" __VA_OPT__(, ) __VA_ARGS__)
 #else
   #define D_LOG(fmt, ...)     ((void)0)
 #endif

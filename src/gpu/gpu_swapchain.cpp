@@ -115,7 +115,7 @@ VkExtent2D aso_vk_swapchain_get_extent(VkSurfaceCapabilitiesKHR capabilities) {
   } else {
     int width, height;
     aso_get_window_size(&g_ctx->window, &width, &height);
-    LOG("Window extent: %dx%d", width, height);
+    D_LOG("Window extent: %dx%d", width, height);
     VkExtent2D extent = {
       CLAMP((u32)width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
       CLAMP((u32)height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)

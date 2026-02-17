@@ -8,7 +8,7 @@
 aso_ctx *g_ctx = NULL;
 
 void aso_init(aso_ctx *ctx) {
-  LOG("aso_init");
+  D_LOG("aso_init");
 
   // set global context pointer
   g_ctx = ctx;
@@ -27,7 +27,7 @@ void aso_init(aso_ctx *ctx) {
 }
 
 void aso_run(void) {
-  LOG("aso_run");
+  D_LOG("aso_run");
 
   g_ctx->running = 1;
 
@@ -44,7 +44,7 @@ void aso_run(void) {
 }
 
 void aso_cleanup(void) {
-  LOG("aso_cleanup");
+  D_LOG("aso_cleanup");
 
   aso_vk_cleanup(&g_ctx->vulkan);
 
