@@ -2,6 +2,7 @@
 #define ASO_BASE_H
 
 #include <cstdint>
+#include <cstdio> // keep
 
 // REGION: COMPILER
 

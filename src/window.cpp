@@ -7,22 +7,16 @@
 #include <SDL3/SDL_vulkan.h>
 
 int aso_window_init(aso_window *window) {
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    LOG("SDL init failed: %s", SDL_GetError());
-    return 1;
-  }
-  LOG("SDL initialized");
+  bool sdl_init_ok = SDL_Init(SDL_INIT_VIDEO);
+  ASSERT_MSG(sdl_init_ok, "SDL init failed: %s", SDL_GetError());
+  D_LOG("SDL initialized");
 
-  SDL_Window *w = nullptr;
+  SDL_Window *w = NULL;
 
   SDL_WindowFlags wflags = SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
   w = SDL_CreateWindow("aso", 640, 480, wflags);
-  if (!w) {
-    LOG("SDL_CreateWindow failed: %s", SDL_GetError());
-    SDL_Quit();
-    return 1;
-  }
-  LOG("window created");
+  ASSERT_MSG(w, "SDL_CreateWindow failed: %s", SDL_GetError());
+  D_LOG("window created");
 
   SDL_SetWindowPosition(w, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
@@ -30,7 +24,7 @@ int aso_window_init(aso_window *window) {
   window->width = 640;
   window->height = 480;
 
-  LOG("SDL ready");
+  D_LOG("SDL ready");
   return 0;
 }
 
