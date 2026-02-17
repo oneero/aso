@@ -15,10 +15,10 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
   size_t scratch_mark = scratch->offset;
   aso_vk_device_init(scratch, &ctx->device);
   scratch->offset = scratch_mark;
-  aso_vk_create_swapchain(&ctx->swapchain, &ctx->device);
-  aso_vk_create_image_views(&ctx->swapchain, &ctx->device);
-  aso_vk_create_render_pass(&ctx->swapchain, &ctx->device);
-  aso_vk_create_framebuffers(&ctx->swapchain, &ctx->device);
+  aso_vk_swapchain_create(&ctx->swapchain, &ctx->device);
+  aso_vk_swapchain_create_image_views(&ctx->swapchain, &ctx->device);
+  aso_vk_swapchain_create_render_pass(&ctx->swapchain, &ctx->device);
+  aso_vk_swapchain_create_framebuffers(&ctx->swapchain, &ctx->device);
   aso_vk_create_graphics_pipeline(scratch, &ctx->pipeline, ctx->device.device, ctx->swapchain.render_pass);
   scratch->offset = scratch_mark;
   aso_vk_create_command_pool(&ctx->frame, &ctx->device);
@@ -47,7 +47,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
     ctx->window_resized = false;
     LOG("Swap chain image out of date or resized when acquiring image");
 
-    aso_vk_recreate_swapchain(&ctx->swapchain, &ctx->device);
+    aso_vk_swapchain_recreate(&ctx->swapchain, &ctx->device);
     // need to recreate tainted semaphore
     // NOTE: recreate_swap_chain() above calls vkDeviceWaitIdle()
     vkDestroySemaphore(ctx->device.device, ctx->frame.image_available_semaphores[f], NULL);
@@ -62,7 +62,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   vkResetFences(ctx->device.device, 1, &ctx->frame.in_flight_fences[f]);
   
   vkResetCommandBuffer(ctx->frame.command_buffers[f], 0);
-  aso_vk_record_command_buffer(&ctx->frame, &ctx->swapchain, &ctx->pipeline, image_index);
+  aso_vk_record_command_buffer(ctx->frame.command_buffers[f], &ctx->swapchain, &ctx->pipeline, image_index);
 
   VkSubmitInfo submit_info = {};
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -98,7 +98,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
       ctx->window_resized) {
     LOG("Swap chain image out of date when presenting");
     ctx->window_resized = false;
-    aso_vk_recreate_swapchain(&ctx->swapchain, &ctx->device);
+    aso_vk_swapchain_recreate(&ctx->swapchain, &ctx->device);
   } else if (present_result != VK_SUCCESS) {
     LOG("Failed to present swap chain image");
   }
@@ -111,27 +111,19 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
 void aso_vk_cleanup(aso_vk_ctx *ctx) {
   vkDeviceWaitIdle(ctx->device.device);
 
-  aso_vk_cleanup_swapchain(&ctx->swapchain, &ctx->device);
+  // sync objects, command pool and buffers
+  aso_vk_frame_cleanup(&ctx->frame, &ctx->device);
 
-  vkDestroyPipeline(ctx->device.device, ctx->pipeline.graphics_pipeline, NULL);
-  vkDestroyPipelineLayout(ctx->device.device, ctx->pipeline.layout, NULL);
+  // pipeline and layout
+  aso_vk_pipeline_cleanup(&ctx->pipeline, &ctx->device);
+  
+  // framebuffers, image views, swapchain
+  aso_vk_swapchain_cleanup(&ctx->swapchain, &ctx->device);
+
   vkDestroyRenderPass(ctx->device.device, ctx->swapchain.render_pass, NULL);
   
-  for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(ctx->device.device, ctx->frame.image_available_semaphores[i], NULL);
-    vkDestroyFence(ctx->device.device, ctx->frame.in_flight_fences[i], NULL);
-  }
-  for (size_t i = 0; i < ASO_VK_SWAP_CHAIN_MAX_IMAGES; i++) {
-    vkDestroySemaphore(ctx->device.device, ctx->frame.render_finished_semaphores[i], NULL);
-  }
-
-  // NOTE: Destroying command bool will implicitly free command buffers
-  vkDestroyCommandPool(ctx->device.device, ctx->frame.command_pool, NULL);
-
-  vkDestroyDevice(ctx->device.device, NULL);
-  vkDestroySurfaceKHR(ctx->device.instance, ctx->device.surface, NULL);
-  vkDestroyInstance(ctx->device.instance, NULL);
+  // device, surface and instance
+  aso_vk_device_cleanup(&ctx->device);
 
   // TODO: aso_arena_destroy(ctx->frame_arena);
-  // NOTE: physical_device and queues are cleaned up implicitly
 }

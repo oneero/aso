@@ -163,3 +163,11 @@ VkShaderModule aso_vk_create_shader_module(VkDevice device, u8 *shader_code, siz
   ASO_VK_CHECK(vkCreateShaderModule(device, &create_info, NULL, &module), "Failed to create shader module");
   return module;
 }
+
+void aso_vk_pipeline_cleanup(aso_vk_pipeline *pipeline, const aso_vk_device *device) {
+  ASSERT(pipeline != NULL);
+  ASSERT(device != NULL);
+  
+  vkDestroyPipeline(device->device, pipeline->graphics_pipeline, NULL);
+  vkDestroyPipelineLayout(device->device, pipeline->layout, NULL);
+}

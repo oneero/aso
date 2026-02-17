@@ -116,3 +116,19 @@ void aso_vk_create_sync_objects(aso_vk_frame *frame, const aso_vk_device *device
     ASO_VK_CHECK(vkCreateSemaphore(device->device, &semaphore_info, NULL, &frame->render_finished_semaphores[i]), "Failed to create semaphore");
   }
 }
+
+void aso_vk_frame_cleanup(aso_vk_frame *frame, const aso_vk_device *device) {
+  ASSERT(frame != NULL);
+  ASSERT(device != NULL);
+
+  for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
+    vkDestroySemaphore(device->device, frame->image_available_semaphores[i], NULL);
+    vkDestroyFence(device->device, frame->in_flight_fences[i], NULL);
+  }
+  for (size_t i = 0; i < ASO_VK_SWAP_CHAIN_MAX_IMAGES; i++) {
+    vkDestroySemaphore(device->device, frame->render_finished_semaphores[i], NULL);
+  }
+
+  // NOTE: Destroying command pool will implicitly free command buffers
+  vkDestroyCommandPool(device->device, frame->command_pool, NULL);
+}

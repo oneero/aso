@@ -25,4 +25,6 @@ void aso_vk_create_command_buffers(aso_vk_frame *frame, const aso_vk_device *dev
 void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain *swapchain, const aso_vk_pipeline *pipeline, u32 image_index);
 void aso_vk_create_sync_objects(aso_vk_frame *frame, const aso_vk_device *device);
 
+void aso_vk_frame_cleanup(aso_vk_frame *frame, const aso_vk_device *device);
+
 #endif // ASO_GPU_FRAME_H

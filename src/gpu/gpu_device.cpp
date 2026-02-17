@@ -18,20 +18,14 @@ const char* aso_vulkan_device_extensions[ASO_VK_DEVICE_EXTENSION_COUNT] = {
 void aso_vk_device_init(aso_arena *scratch, aso_vk_device* device) {
   ASSERT(scratch != NULL);
   ASSERT(device != NULL);
-  size_t scratch_mark = scratch->offset;
 
   aso_vk_instance_init(scratch, device);
-  scratch->offset = scratch_mark;
 
   bool surface_ok = aso_create_vulkan_surface(g_ctx->window.handle, device->instance, &device->surface);
   ASSERT(surface_ok && "Failed to create SDL3 surface for Vulkan");
 
   aso_vk_select_physical_device(scratch, device);
-  scratch->offset = scratch_mark;
-
   device->queue_families = aso_vk_get_queue_families(scratch, device->physical_device, device->surface);
-  scratch->offset = scratch_mark;
-
   aso_vk_create_logical_device(device);
 }
 
@@ -211,7 +205,7 @@ void aso_vk_select_physical_device(aso_arena *scratch, aso_vk_device *device) {
 
   device->physical_device = VK_NULL_HANDLE;
  
-  LOG("Finding suitable GPU..");
+  D_LOG("Finding suitable GPU..");
   
   u32 device_count = 0;
   vkEnumeratePhysicalDevices(device->instance, &device_count, NULL);
@@ -360,4 +354,13 @@ aso_vk_surface_details aso_vk_get_surface_details(VkPhysicalDevice physical_devi
     LOG("Too many present modes (%u > %u)", details.present_modes_count, ASO_VK_MAX_PRESENT_MODES);
   }
   return details;
+}
+
+void aso_vk_device_cleanup(aso_vk_device *device) {
+  ASSERT(device != NULL);
+
+  // NOTE: physical_device and queues are cleaned up implicitly
+  vkDestroyDevice(device->device, NULL);
+  vkDestroySurfaceKHR(device->instance, device->surface, NULL);
+  vkDestroyInstance(device->instance, NULL);
 }

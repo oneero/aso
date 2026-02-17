@@ -38,6 +38,7 @@ struct aso_vk_device
 };
 
 void                   aso_vk_device_init(aso_arena *scratch, aso_vk_device *device);
+void                   aso_vk_device_cleanup(aso_vk_device *device);
 
 void                   aso_vk_instance_init(aso_arena *scratch, aso_vk_device *device);
 void                   aso_vk_select_physical_device(aso_arena *scratch, aso_vk_device *device);

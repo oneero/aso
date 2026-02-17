@@ -5,7 +5,7 @@
 #include "gpu.h"
 #include "gpu/gpu_device.h"
 
-void aso_vk_create_swapchain(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
+void aso_vk_swapchain_create(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
   ASSERT(swapchain != NULL);
   ASSERT(device != NULL);
 
@@ -35,7 +35,7 @@ void aso_vk_create_swapchain(aso_vk_swapchain *swapchain, const aso_vk_device *d
   }
   
   // extent
-  VkExtent2D extent = aso_vk_get_swapchain_extent(capabilities);
+  VkExtent2D extent = aso_vk_swapchain_get_extent(capabilities);
   D_LOG(" Extent: %d x %d", extent.width, extent.height);
 
   u32 image_count = capabilities.minImageCount + 1;
@@ -86,7 +86,7 @@ void aso_vk_create_swapchain(aso_vk_swapchain *swapchain, const aso_vk_device *d
   swapchain->extent = extent;
 }
 
-void aso_vk_recreate_swapchain(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
+void aso_vk_swapchain_recreate(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
   ASSERT(swapchain != NULL);
   ASSERT(device != NULL);
 
@@ -100,13 +100,13 @@ void aso_vk_recreate_swapchain(aso_vk_swapchain *swapchain, const aso_vk_device 
 
   vkDeviceWaitIdle(device->device);
 
-  aso_vk_cleanup_swapchain(swapchain, device);
-  aso_vk_create_swapchain(swapchain, device);
-  aso_vk_create_image_views(swapchain, device);
-  aso_vk_create_framebuffers(swapchain, device);
+  aso_vk_swapchain_cleanup(swapchain, device);
+  aso_vk_swapchain_create(swapchain, device);
+  aso_vk_swapchain_create_image_views(swapchain, device);
+  aso_vk_swapchain_create_framebuffers(swapchain, device);
 }
 
-VkExtent2D aso_vk_get_swapchain_extent(VkSurfaceCapabilitiesKHR capabilities) {
+VkExtent2D aso_vk_swapchain_get_extent(VkSurfaceCapabilitiesKHR capabilities) {
   // check current extents for special value
   // -> go with already set extent
   // -> special value set: set swap extent here and the surface will conform
@@ -127,7 +127,7 @@ VkExtent2D aso_vk_get_swapchain_extent(VkSurfaceCapabilitiesKHR capabilities) {
 
 // REGION: IMAGE VIEWS
 
-void aso_vk_create_image_views(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
+void aso_vk_swapchain_create_image_views(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
   ASSERT(swapchain != NULL);
   ASSERT(device->device != NULL);
   
@@ -154,7 +154,7 @@ void aso_vk_create_image_views(aso_vk_swapchain *swapchain, const aso_vk_device 
 
 // REGION: FRAMEBUFFERS
 
-void aso_vk_create_framebuffers(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
+void aso_vk_swapchain_create_framebuffers(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
   ASSERT(swapchain != NULL);
   ASSERT(device->device != NULL);
 
@@ -178,7 +178,7 @@ void aso_vk_create_framebuffers(aso_vk_swapchain *swapchain, const aso_vk_device
 
 // REGION: RENDER PASS
 
-void aso_vk_create_render_pass(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
+void aso_vk_swapchain_create_render_pass(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
   ASSERT(swapchain != NULL);
   ASSERT(device != NULL);
 
@@ -226,7 +226,7 @@ void aso_vk_create_render_pass(aso_vk_swapchain *swapchain, const aso_vk_device 
 
 // REGION: CLEANUP
 
-void aso_vk_cleanup_swapchain(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
+void aso_vk_swapchain_cleanup(aso_vk_swapchain *swapchain, const aso_vk_device *device) {
   ASSERT(device->device != NULL);
   ASSERT(swapchain != NULL);
 
@@ -236,5 +236,5 @@ void aso_vk_cleanup_swapchain(aso_vk_swapchain *swapchain, const aso_vk_device *
     vkDestroyImageView(device->device, swapchain->image_views[i], NULL);
   }
 
-  vkDestroySwapchainKHR(device->device, swapchain->handle, NULL);
+  vkDestroySwapchainKHR(device->device, swapchain->handle, NULL); 
 }
