@@ -21,6 +21,15 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
   aso_vk_swapchain_create_framebuffers(&ctx->swapchain, &ctx->device);
   aso_vk_create_graphics_pipeline(scratch, &ctx->pipeline, ctx->device.device, ctx->swapchain.render_pass);
   scratch->offset = scratch_mark;
+
+  // TODO: find a better place for this
+  aso_vk_vertex vertices[] = {
+      {.pos = {.x =  0.0f, .y = -0.5f}, .color = {.x = 1.0f, .y = 1.0f, .z = 1.0f}},
+      {.pos = {.x =  0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 1.0f, .z = 0.0f}},
+      {.pos = {.x = -0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 0.0f, .z = 1.0f}},
+  };
+  aso_vk_create_vertex_buffer(vertices, 3, &ctx->device, &ctx->pipeline);
+  
   aso_vk_create_command_pool(&ctx->frame, &ctx->device);
   aso_vk_create_command_buffers(&ctx->frame, &ctx->device);
   aso_vk_create_sync_objects(&ctx->frame, &ctx->device);
@@ -45,7 +54,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
       image_acquire_result == VK_SUBOPTIMAL_KHR ||
       ctx->window_resized) {
     ctx->window_resized = false;
-    LOG("Swap chain image out of date or resized when acquiring image");
+    D_LOG("Swap chain image out of date or resized when acquiring image");
 
     aso_vk_swapchain_recreate(&ctx->swapchain, &ctx->device);
     // need to recreate tainted semaphore
@@ -96,11 +105,11 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
       present_result == VK_SUBOPTIMAL_KHR ||
       ctx->window_resized) {
-    LOG("Swap chain image out of date when presenting");
+    D_LOG("Swap chain image out of date when presenting");
     ctx->window_resized = false;
     aso_vk_swapchain_recreate(&ctx->swapchain, &ctx->device);
   } else if (present_result != VK_SUCCESS) {
-    LOG("Failed to present swap chain image");
+    LOG_ERROR("Failed to present swap chain image");
   }
 
   ctx->frame.current = (f + 1) % ASO_VK_FRAMES_IN_FLIGHT;

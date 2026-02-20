@@ -35,8 +35,6 @@ struct aso_vk_ctx
 void                            aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx);
 void                            aso_vk_draw_frame(aso_vk_ctx *ctx);
 void                            aso_vk_cleanup(aso_vk_ctx *ctx);
-VkVertexInputBindingDescription aso_vk_get_vertex_binding_desc(void);
-
 
 // REGION: HELPER MACROS
 

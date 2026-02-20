@@ -1,5 +1,8 @@
+#include <cstddef>
 #include <vulkan/vulkan_core.h>
 
+#include "base.h"
+#include "gpu/gpu_device.h"
 #include "io.h"
 #include "gpu.h"
 #include "gpu_pipeline.h"
@@ -38,13 +41,14 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeli
 
   // vertex input
 
-  // vertex info is hardcoded in shader for now
+  aso_vk_vertex_descriptions desc = aso_vk_create_vertex_descriptions();
+
   VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
   vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertex_input_info.vertexBindingDescriptionCount = 0;
-  vertex_input_info.pVertexAttributeDescriptions = NULL; // optional
-  vertex_input_info.vertexAttributeDescriptionCount = 0;
-  vertex_input_info.pVertexAttributeDescriptions = NULL; // optional
+  vertex_input_info.vertexBindingDescriptionCount = 1;
+  vertex_input_info.pVertexBindingDescriptions = &desc.binding; // optional
+  vertex_input_info.vertexAttributeDescriptionCount = desc.attribute_count;
+  vertex_input_info.pVertexAttributeDescriptions = desc.attributes; // optional
 
   VkPipelineInputAssemblyStateCreateInfo input_assembly = {};
   input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -170,4 +174,90 @@ void aso_vk_pipeline_cleanup(aso_vk_pipeline *pipeline, const aso_vk_device *dev
   
   vkDestroyPipeline(device->device, pipeline->graphics_pipeline, NULL);
   vkDestroyPipelineLayout(device->device, pipeline->layout, NULL);
+
+  vkDestroyBuffer(device->device, pipeline->vertex_buffer, NULL);
+  vkFreeMemory(device->device, pipeline->vertex_buffer_memory, NULL);
+}
+
+// REGION: VERTEX
+
+aso_vk_vertex_descriptions aso_vk_create_vertex_descriptions(void) {
+  return aso_vk_vertex_descriptions {
+    .binding = { // VkVertexInputBindingDescription
+      .binding = 0,
+      .stride = sizeof(aso_vk_vertex),
+      .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    },
+    .attributes = { // VkVertexInputAttributeDescription
+  { // pos
+        .location = 0,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(aso_vk_vertex, pos)
+      },
+  { // color
+        .location = 1,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(aso_vk_vertex, color)
+      }
+    },
+    .attribute_count = 2
+  };
+}
+
+void aso_vk_create_vertex_buffer(aso_vk_vertex *vertices, u32 vertex_count, const aso_vk_device *device, aso_vk_pipeline *pipeline) {
+  ASSERT(vertices != NULL);
+  ASSERT(vertex_count > 0);
+  ASSERT(pipeline != NULL);
+  ASSERT(device != NULL);
+
+  // define buffer
+  
+  VkBufferCreateInfo buffer_info {
+    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    .size = sizeof(aso_vk_vertex) * vertex_count,
+    .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+  };
+
+  ASO_VK_CHECK(vkCreateBuffer(device->device, &buffer_info, NULL, &pipeline->vertex_buffer), "Failed to create vertex buffer");
+
+  // define and allocate memory
+
+  VkMemoryRequirements memory_requirements;
+  vkGetBufferMemoryRequirements(device->device, pipeline->vertex_buffer, &memory_requirements);
+
+  VkMemoryAllocateInfo alloc_info = {
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .allocationSize = memory_requirements.size,
+    .memoryTypeIndex = aso_vk_get_memory_type_index(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &device->memory_properties)
+  };
+
+  ASO_VK_CHECK(vkAllocateMemory(device->device, &alloc_info, NULL, &pipeline->vertex_buffer_memory), "Failed to allocate vertex buffer memory");
+
+  // bind buffer to memory
+
+  vkBindBufferMemory(device->device, pipeline->vertex_buffer, pipeline->vertex_buffer_memory, 0);
+
+  // map to host memory, copy and unmap
+  // NOTE: driver might not copy immediately to device 
+  // NOTE: we use VK_MEMORY_PROPERTY_HOST_COHERENT_BIT to ensure memory sync with driver
+
+  void* data;
+  vkMapMemory(device->device, pipeline->vertex_buffer_memory, 0, buffer_info.size, 0, &data);
+  memcpy(data, vertices, (size_t) buffer_info.size);
+  vkUnmapMemory(device->device, pipeline->vertex_buffer_memory);
+
+  pipeline->vertex_count = vertex_count;
+}
+
+u32 aso_vk_get_memory_type_index(u32 type_filter, VkMemoryPropertyFlags properties, const VkPhysicalDeviceMemoryProperties *memory_properties) {
+  for (u32 i = 0; i < memory_properties->memoryTypeCount; i++) {
+    if ((type_filter & (1 << i)) && (memory_properties->memoryTypes[i].propertyFlags & properties) == properties) {
+      return i;
+    }
+  }
+  LOG_ERROR("Failed to find suitable memory type");
+  return 0;
 }

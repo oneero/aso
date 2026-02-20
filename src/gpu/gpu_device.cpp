@@ -27,6 +27,8 @@ void aso_vk_device_init(aso_arena *scratch, aso_vk_device* device) {
   aso_vk_select_physical_device(scratch, device);
   device->queue_families = aso_vk_get_queue_families(scratch, device->physical_device, device->surface);
   aso_vk_create_logical_device(device);
+
+  vkGetPhysicalDeviceMemoryProperties(device->physical_device, &device->memory_properties);
 }
 
 // REGION: INSTANCE

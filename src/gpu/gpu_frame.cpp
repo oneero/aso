@@ -68,6 +68,10 @@ void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain
 
   vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphics_pipeline);
 
+  VkBuffer vertex_buffers[] = { pipeline->vertex_buffer };
+  VkDeviceSize offsets[] = { 0 };
+  vkCmdBindVertexBuffers(buffer, 0, 1, vertex_buffers, offsets);
+
   // define viewport and scissor as they were set to dynamic
 
   VkViewport viewport = {};
@@ -86,7 +90,7 @@ void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain
 
   // draw!
 
-  vkCmdDraw(buffer, 3, 1, 0, 0);
+  vkCmdDraw(buffer, pipeline->vertex_count, 1, 0, 0);
 
   vkCmdEndRenderPass(buffer);
 

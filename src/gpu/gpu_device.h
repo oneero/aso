@@ -1,7 +1,9 @@
 #ifndef ASO_GPU_DEVICE_H
 #define ASO_GPU_DEVICE_H
 
+#include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 #include "base.h"
 #include "gpu_config.h"
@@ -25,16 +27,17 @@ struct aso_vk_surface_details
 
 struct aso_vk_device
 {
-  VkInstance             instance;
-  VkPhysicalDevice       physical_device;
-  VkDevice               device;
-  VkSurfaceKHR           surface;
-  VkQueue                graphics_queue;
-  VkQueue                presentation_queue;
-  aso_vk_queue_families  queue_families;
-  aso_vk_surface_details surface_details;
+  VkInstance                       instance;
+  VkPhysicalDevice                 physical_device;
+  VkDevice                         device;
+  VkSurfaceKHR                     surface;
+  VkQueue                          graphics_queue;
+  VkQueue                          presentation_queue;
+  aso_vk_queue_families            queue_families;
+  aso_vk_surface_details           surface_details;
+  VkPhysicalDeviceMemoryProperties memory_properties;
 
-  bool                   use_validation;
+  bool                             use_validation;
 };
 
 void                   aso_vk_device_init(aso_arena *scratch, aso_vk_device *device);
