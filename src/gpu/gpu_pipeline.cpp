@@ -206,47 +206,54 @@ aso_vk_vertex_descriptions aso_vk_create_vertex_descriptions(void) {
   };
 }
 
+void aso_vk_create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const aso_vk_device *device, VkBuffer *buffer, VkDeviceMemory *buffer_memory) {
+  ASSERT(device != NULL);
+  ASSERT(buffer != NULL);
+  ASSERT(buffer_memory != NULL);
+
+  // define buffer
+  VkBufferCreateInfo buffer_info {
+    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    .size = size,
+    .usage = usage,
+    .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+  };
+  ASO_VK_CHECK(vkCreateBuffer(device->device, &buffer_info, NULL, buffer), "Failed to create vertex buffer");
+  
+  // define and allocate memory
+
+  VkMemoryRequirements memory_requirements;
+  vkGetBufferMemoryRequirements(device->device, *buffer, &memory_requirements);
+
+  VkMemoryAllocateInfo alloc_info = {
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .allocationSize = memory_requirements.size,
+    .memoryTypeIndex = aso_vk_get_memory_type_index(memory_requirements.memoryTypeBits, properties, &device->memory_properties)
+  };
+
+  ASO_VK_CHECK(vkAllocateMemory(device->device, &alloc_info, NULL, buffer_memory), "Failed to allocate vertex buffer memory");
+  
+  // bind buffer to memory
+
+  vkBindBufferMemory(device->device, *buffer, *buffer_memory, 0);
+}
+
 void aso_vk_create_vertex_buffer(aso_vk_vertex *vertices, u32 vertex_count, const aso_vk_device *device, aso_vk_pipeline *pipeline) {
   ASSERT(vertices != NULL);
   ASSERT(vertex_count > 0);
   ASSERT(pipeline != NULL);
   ASSERT(device != NULL);
 
-  // define buffer
-  
-  VkBufferCreateInfo buffer_info {
-    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-    .size = sizeof(aso_vk_vertex) * vertex_count,
-    .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-  };
-
-  ASO_VK_CHECK(vkCreateBuffer(device->device, &buffer_info, NULL, &pipeline->vertex_buffer), "Failed to create vertex buffer");
-
-  // define and allocate memory
-
-  VkMemoryRequirements memory_requirements;
-  vkGetBufferMemoryRequirements(device->device, pipeline->vertex_buffer, &memory_requirements);
-
-  VkMemoryAllocateInfo alloc_info = {
-    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-    .allocationSize = memory_requirements.size,
-    .memoryTypeIndex = aso_vk_get_memory_type_index(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &device->memory_properties)
-  };
-
-  ASO_VK_CHECK(vkAllocateMemory(device->device, &alloc_info, NULL, &pipeline->vertex_buffer_memory), "Failed to allocate vertex buffer memory");
-
-  // bind buffer to memory
-
-  vkBindBufferMemory(device->device, pipeline->vertex_buffer, pipeline->vertex_buffer_memory, 0);
+  VkDeviceSize buffer_size = sizeof(vertices[0]) * vertex_count;
+  aso_vk_create_buffer(buffer_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, device, &pipeline->vertex_buffer, &pipeline->vertex_buffer_memory);
 
   // map to host memory, copy and unmap
   // NOTE: driver might not copy immediately to device 
   // NOTE: we use VK_MEMORY_PROPERTY_HOST_COHERENT_BIT to ensure memory sync with driver
 
   void* data;
-  vkMapMemory(device->device, pipeline->vertex_buffer_memory, 0, buffer_info.size, 0, &data);
-  memcpy(data, vertices, (size_t) buffer_info.size);
+  vkMapMemory(device->device, pipeline->vertex_buffer_memory, 0, buffer_size, 0, &data);
+  memcpy(data, vertices, (size_t) buffer_size);
   vkUnmapMemory(device->device, pipeline->vertex_buffer_memory);
 
   pipeline->vertex_count = vertex_count;

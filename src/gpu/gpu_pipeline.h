@@ -41,6 +41,7 @@ struct aso_vk_vertex_descriptions
 };
 
 aso_vk_vertex_descriptions aso_vk_create_vertex_descriptions(void);
+void                       aso_vk_create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, const aso_vk_device *device, VkBuffer *buffer, VkDeviceMemory *buffer_memory);
 void                       aso_vk_create_vertex_buffer(aso_vk_vertex *vertices, u32 vertex_count, const aso_vk_device *device, aso_vk_pipeline *pipeline);
 u32                        aso_vk_get_memory_type_index(u32 type_filter, VkMemoryPropertyFlags properties, const VkPhysicalDeviceMemoryProperties *memory_properties);
 
