@@ -37,20 +37,22 @@ void aso_vk_instance_init(aso_arena *scratch, aso_vk_device *device) {
   ASSERT(scratch != NULL);
   ASSERT(device != NULL);
 
-  VkApplicationInfo app_info = {};
-  app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  app_info.pApplicationName = "aso";
-  app_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
-  app_info.pEngineName = "aso";
-  app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-  app_info.apiVersion = VK_API_VERSION_1_0;
+  VkApplicationInfo app_info = {
+    .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+    .pApplicationName = "aso",
+    .applicationVersion = VK_MAKE_VERSION(0, 1, 0),
+    .pEngineName = "aso",
+    .engineVersion = VK_MAKE_VERSION(0, 1, 0),
+    .apiVersion = VK_API_VERSION_1_0,
+  };
 
-  VkInstanceCreateInfo instance_create_info = {};
-  instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  instance_create_info.pApplicationInfo = &app_info;
+  VkInstanceCreateInfo instance_create_info = {
+    .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+    .pApplicationInfo = &app_info,
 
-  instance_create_info.ppEnabledLayerNames = aso_vk_resolve_layers(scratch, &instance_create_info.enabledLayerCount, &device->use_validation);
-  instance_create_info.ppEnabledExtensionNames = aso_vk_resolve_extensions(scratch, &instance_create_info.enabledExtensionCount, device->use_validation);
+    .ppEnabledLayerNames = aso_vk_resolve_layers(scratch, &instance_create_info.enabledLayerCount, &device->use_validation),
+    .ppEnabledExtensionNames = aso_vk_resolve_extensions(scratch, &instance_create_info.enabledExtensionCount, device->use_validation),
+  };
 
   ASO_VK_CHECK(vkCreateInstance(&instance_create_info, NULL, &device->instance), "Failed to create Vulkan instance");
   
@@ -274,14 +276,14 @@ void aso_vk_create_logical_device(aso_vk_device *device) {
 
   VkPhysicalDeviceFeatures device_features = {}; // TODO: get back to this
 
-  VkDeviceCreateInfo device_create_info = {};
-  device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  device_create_info.pQueueCreateInfos = queue_create_infos;
-  device_create_info.queueCreateInfoCount = unique_family_count;
-  device_create_info.pEnabledFeatures = &device_features;
-
-  device_create_info.enabledExtensionCount = ASO_VK_DEVICE_EXTENSION_COUNT;
-  device_create_info.ppEnabledExtensionNames = aso_vulkan_device_extensions;
+  VkDeviceCreateInfo device_create_info = {
+    .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    .queueCreateInfoCount = unique_family_count,
+    .pQueueCreateInfos = queue_create_infos,
+    .enabledExtensionCount = ASO_VK_DEVICE_EXTENSION_COUNT,
+    .ppEnabledExtensionNames = aso_vulkan_device_extensions,
+    .pEnabledFeatures = &device_features,
+  };
 
   // validation layers are already defined at instance level
   // this is not necessary for up-to-date Vulkan SDK, but included for combatibility

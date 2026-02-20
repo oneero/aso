@@ -73,33 +73,36 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   vkResetCommandBuffer(ctx->frame.command_buffers[f], 0);
   aso_vk_record_command_buffer(ctx->frame.command_buffers[f], &ctx->swapchain, &ctx->pipeline, image_index);
 
-  VkSubmitInfo submit_info = {};
-  submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
   VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-  submit_info.waitSemaphoreCount = 1;
-  submit_info.pWaitSemaphores = &ctx->frame.image_available_semaphores[f];
-  submit_info.pWaitDstStageMask = wait_stages;
+  
+  VkSubmitInfo submit_info = {
+   .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 
-  submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &ctx->frame.command_buffers[f];
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &ctx->frame.image_available_semaphores[f],
+    .pWaitDstStageMask = wait_stages,
 
-  // use image_index here and per image semaphore so we know presentation has completed
-  submit_info.signalSemaphoreCount = 1;
-  submit_info.pSignalSemaphores = &ctx->frame.render_finished_semaphores[image_index];
+    .commandBufferCount = 1,
+    .pCommandBuffers = &ctx->frame.command_buffers[f],
+
+    // use image_index here and per image semaphore so we know presentation has completed
+    .signalSemaphoreCount = 1,
+    .pSignalSemaphores = &ctx->frame.render_finished_semaphores[image_index],
+  };
 
   ASO_VK_CHECK(vkQueueSubmit(ctx->device.graphics_queue, 1, &submit_info, ctx->frame.in_flight_fences[f]), "Failed to submit draw command buffer");
 
-  VkPresentInfoKHR present_info = {};
-  present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-  present_info.waitSemaphoreCount = 1;
-  present_info.pWaitSemaphores = &ctx->frame.render_finished_semaphores[image_index];
+  VkPresentInfoKHR present_info = {
+    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &ctx->frame.render_finished_semaphores[image_index],
 
-  present_info.swapchainCount = 1;
-  present_info.pSwapchains = &ctx->swapchain.handle;
-  present_info.pImageIndices = &image_index;
+    .swapchainCount = 1,
+    .pSwapchains = &ctx->swapchain.handle,
+    .pImageIndices = &image_index,
 
-  present_info.pResults = NULL; // optional
+    .pResults = NULL, // optional
+  };
 
   VkResult present_result = vkQueuePresentKHR(ctx->device.presentation_queue, &present_info);
   if (present_result == VK_ERROR_OUT_OF_DATE_KHR ||
