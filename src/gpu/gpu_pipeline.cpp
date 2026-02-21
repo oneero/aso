@@ -189,6 +189,8 @@ void aso_vk_pipeline_cleanup(aso_vk_pipeline *pipeline, const aso_vk_device *dev
 
   vkDestroyBuffer(device->device, pipeline->vertex_buffer, NULL);
   vkFreeMemory(device->device, pipeline->vertex_buffer_memory, NULL);
+  vkDestroyBuffer(device->device, pipeline->index_buffer, NULL);
+  vkFreeMemory(device->device, pipeline->index_buffer_memory, NULL);
 }
 
 // REGION: BUFFERS
@@ -322,3 +324,48 @@ void aso_vk_create_vertex_buffer(aso_vk_vertex *vertices, u32 vertex_count, aso_
   ctx->pipeline.vertex_count = vertex_count;
 }
 
+void aso_vk_create_index_buffer(u16 *indices, u32 index_count, aso_vk_ctx *ctx) {
+  ASSERT(indices != NULL);
+  ASSERT(index_count > 0);
+  ASSERT(ctx != NULL);
+
+  VkDeviceSize buffer_size = sizeof(indices[0]) * index_count;
+
+  // staging buffer for data transfer
+  
+  VkBuffer staging_buffer;
+  VkDeviceMemory staging_buffer_memory;
+  aso_vk_create_buffer(buffer_size,
+                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                       &ctx->device,
+                       &staging_buffer,
+                       &staging_buffer_memory);
+
+  // map staging buffer to host memory, copy and unmap
+
+  void* data;
+  vkMapMemory(ctx->device.device, staging_buffer_memory, 0, buffer_size, 0, &data);
+  memcpy(data, indices, (size_t) buffer_size);
+  vkUnmapMemory(ctx->device.device, staging_buffer_memory);
+
+  // device local vertex buffer (and destination of transfer)
+
+  aso_vk_create_buffer(buffer_size,
+                       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                       &ctx->device,
+                       &ctx->pipeline.index_buffer,
+                       &ctx->pipeline.index_buffer_memory);
+
+  // copy from staging
+  aso_vk_immediate_begin(ctx);
+  aso_vk_copy_buffer(staging_buffer, ctx->pipeline.index_buffer, buffer_size, ctx->immediate_cmd_buffer);
+  aso_vk_immediate_end(ctx);
+
+  // destroy staging
+  vkDestroyBuffer(ctx->device.device, staging_buffer, NULL);
+  vkFreeMemory(ctx->device.device, staging_buffer_memory, NULL);
+
+  ctx->pipeline.index_count = index_count;
+}

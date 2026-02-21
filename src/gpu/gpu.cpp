@@ -25,12 +25,16 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
 
   // TODO: find a better place for this
   aso_vk_vertex vertices[] = {
-      {.pos = {.x =  0.0f, .y = -0.5f}, .color = {.x = 1.0f, .y = 1.0f, .z = 1.0f}},
-      {.pos = {.x =  0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 1.0f, .z = 0.0f}},
-      {.pos = {.x = -0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 0.0f, .z = 1.0f}},
+      {.pos = {.x = -0.5f, .y = -0.5f}, .color = {.x = 1.0f, .y = 0.0f, .z = 0.0f}},
+      {.pos = {.x =  0.5f, .y = -0.5f}, .color = {.x = 0.0f, .y = 1.0f, .z = 0.0f}},
+      {.pos = {.x =  0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 0.0f, .z = 1.0f}},
+      {.pos = {.x = -0.5f, .y =  0.5f}, .color = {.x = 1.0f, .y = 1.0f, .z = 1.0f}},
   };
-  aso_vk_create_vertex_buffer(vertices, 3, ctx);
-  
+  aso_vk_create_vertex_buffer(vertices, 4, ctx);
+
+  u16 indices[] = { 0, 1, 2, 2, 3, 0 };
+  aso_vk_create_index_buffer(indices, 6, ctx);
+
   aso_vk_create_command_pool(&ctx->frame, &ctx->device);
   aso_vk_create_command_buffers(&ctx->frame, &ctx->device);
   aso_vk_create_sync_objects(&ctx->frame, &ctx->device);
