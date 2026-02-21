@@ -5,19 +5,12 @@
 #include <vulkan/vulkan_core.h>
 
 #include "base.h"
-#include "math.h"
 #include "mem.h"
 
 #include "gpu_device.h"
 #include "gpu_swapchain.h"
 #include "gpu_pipeline.h"
 #include "gpu_frame.h"
-
-struct aso_vertex
-{
-  v2f32 pos;
-  v3f32 color;
-};
 
 // vulkan context
 struct aso_vk_ctx
