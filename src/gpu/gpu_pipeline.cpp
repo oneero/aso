@@ -82,12 +82,13 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeli
     .polygonMode = VK_POLYGON_MODE_FILL,
     .cullMode = VK_CULL_MODE_BACK_BIT,
     .frontFace = VK_FRONT_FACE_CLOCKWISE,
-    .lineWidth = 1.0f,
 
     .depthBiasEnable = VK_FALSE,
     .depthBiasConstantFactor = 0.0f, // optional
     .depthBiasClamp = 0.0f, // optional
     .depthBiasSlopeFactor = 0.0f, // optional
+    
+    .lineWidth = 1.0f,
   };
 
   // TODO: enable later
@@ -107,7 +108,6 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeli
   // NOTE:: alpha blending disabled for now
 
   VkPipelineColorBlendAttachmentState color_blend_attachment = {
-    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
     .blendEnable = VK_FALSE,
     .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, // optional
     .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, // optional
@@ -115,6 +115,7 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeli
     .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, // optional
     .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO, // optional
     .alphaBlendOp = VK_BLEND_OP_ADD, // optional
+    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
   };
 
   VkPipelineColorBlendStateCreateInfo color_blending = {
