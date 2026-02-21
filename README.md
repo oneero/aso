@@ -13,8 +13,10 @@ Initially aso will simply be a re-implementation of my previous compute shader s
 ## Roadmap
 
 - [x] triangle
-- [ ] switch to dynamic rendering
-- [ ] textured quad with necessary shader buffers
+- [x] ~switch to dynamic rendering~
+- [x] indexed quad
+- [ ] uniforms
+- [ ] textures
 - [ ] compute shader support
 - [ ] cca/boids examples
 - [ ] gui
