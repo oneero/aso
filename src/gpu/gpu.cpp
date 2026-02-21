@@ -29,11 +29,12 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
       {.pos = {.x =  0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 1.0f, .z = 0.0f}},
       {.pos = {.x = -0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 0.0f, .z = 1.0f}},
   };
-  aso_vk_create_vertex_buffer(vertices, 3, &ctx->device, &ctx->pipeline);
+  aso_vk_create_vertex_buffer(vertices, 3, ctx);
   
   aso_vk_create_command_pool(&ctx->frame, &ctx->device);
   aso_vk_create_command_buffers(&ctx->frame, &ctx->device);
   aso_vk_create_sync_objects(&ctx->frame, &ctx->device);
+
 }
 
 // REGION: DRAW FRAME
