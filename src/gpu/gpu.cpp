@@ -15,6 +15,7 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
   size_t scratch_mark = scratch->offset;
   aso_vk_device_init(scratch, &ctx->device);
   scratch->offset = scratch_mark;
+  aso_vk_immediate_create(ctx);
   aso_vk_swapchain_create(&ctx->swapchain, &ctx->device);
   aso_vk_swapchain_create_image_views(&ctx->swapchain, &ctx->device);
   aso_vk_swapchain_create_render_pass(&ctx->swapchain, &ctx->device);
@@ -123,6 +124,8 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
 void aso_vk_cleanup(aso_vk_ctx *ctx) {
   vkDeviceWaitIdle(ctx->device.device);
 
+  aso_vk_immediate_destroy(ctx);
+
   // sync objects, command pool and buffers
   aso_vk_frame_cleanup(&ctx->frame, &ctx->device);
 
@@ -138,4 +141,75 @@ void aso_vk_cleanup(aso_vk_ctx *ctx) {
   aso_vk_device_cleanup(&ctx->device);
 
   // TODO: aso_arena_destroy(ctx->frame_arena);
+}
+
+// REGION: UTILITIES
+
+void aso_vk_immediate_create(aso_vk_ctx *ctx) {
+  ASSERT(ctx != NULL);
+  
+  VkCommandPoolCreateInfo pool_info = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT, // short-lived buffers hint
+    .queueFamilyIndex = ctx->device.queue_families.graphics_family,
+  };
+  
+  ASO_VK_CHECK(vkCreateCommandPool(ctx->device.device, &pool_info, NULL, &ctx->immediate_cmd_pool), "Failed to create immediate command pool");
+
+  VkCommandBufferAllocateInfo alloc_info = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+    .commandPool = ctx->immediate_cmd_pool,
+    .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    .commandBufferCount = 1,
+  };
+
+  ASO_VK_CHECK(vkAllocateCommandBuffers(ctx->device.device, &alloc_info, &ctx->immediate_cmd_buffer), "Failed to allocate immediate command buffer");
+
+  VkFenceCreateInfo fence_info = {
+    .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+    .flags = 0,
+  };
+  
+  ASO_VK_CHECK(vkCreateFence(ctx->device.device, &fence_info, NULL, &ctx->immediate_fence), "Failed to create immediate fence");
+}
+
+void aso_vk_immediate_destroy(aso_vk_ctx *ctx) {
+  ASSERT(ctx != NULL);
+
+  vkDestroyFence(ctx->device.device, ctx->immediate_fence, NULL);
+  vkDestroyCommandPool(ctx->device.device, ctx->immediate_cmd_pool, NULL);
+}
+
+void aso_vk_immediate_begin(aso_vk_ctx *ctx) {
+  ASSERT(ctx != NULL);
+
+  // reset entire pool
+  ASO_VK_CHECK(vkResetCommandPool(ctx->device.device, ctx->immediate_cmd_pool, 0), "Failed to reset immediate command pool");
+
+  // ONE_TIME_SUBMIT_BIT means we submit once and always reset and record again
+  VkCommandBufferBeginInfo begin_info = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+  };
+
+  ASO_VK_CHECK(vkBeginCommandBuffer(ctx->immediate_cmd_buffer, &begin_info), "Failed to begin immediate command buffer");
+}
+
+void aso_vk_immediate_end(aso_vk_ctx *ctx) {
+  ASSERT(ctx != NULL);
+
+  ASO_VK_CHECK(vkEndCommandBuffer(ctx->immediate_cmd_buffer), "Failed to end immediate command buffer");
+
+  VkSubmitInfo submit_info = {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .commandBufferCount = 1,
+    .pCommandBuffers = &ctx->immediate_cmd_buffer,
+  };
+
+  ASO_VK_CHECK(vkQueueSubmit(ctx->device.graphics_queue, 1, &submit_info, ctx->immediate_fence), "Failed to submit immediate commands to queue");
+
+  // block & reset
+  
+  vkWaitForFences(ctx->device.device, 1, &ctx->immediate_fence, VK_TRUE, UINT64_MAX);
+  vkResetFences(ctx->device.device, 1, &ctx->immediate_fence);
 }

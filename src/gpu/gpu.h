@@ -22,12 +22,23 @@ struct aso_vk_ctx
   aso_vk_swapchain swapchain;
   aso_vk_pipeline  pipeline;
   aso_vk_frame     frame;
+
+  // utilities
+  VkCommandPool    immediate_cmd_pool;
+  VkCommandBuffer  immediate_cmd_buffer;
+  VkFence          immediate_fence;
 };
 
 // main api
-void                            aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx);
-void                            aso_vk_draw_frame(aso_vk_ctx *ctx);
-void                            aso_vk_cleanup(aso_vk_ctx *ctx);
+void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx);
+void aso_vk_draw_frame(aso_vk_ctx *ctx);
+void aso_vk_cleanup(aso_vk_ctx *ctx);
+
+// utilities
+void aso_vk_immediate_create(aso_vk_ctx *ctx);
+void aso_vk_immediate_destroy(aso_vk_ctx *ctx);
+void aso_vk_immediate_begin(aso_vk_ctx *ctx);
+void aso_vk_immediate_end(aso_vk_ctx *ctx);
 
 // REGION: HELPER MACROS
 
