@@ -9,6 +9,7 @@
 
 #include "gpu_device.h"
 #include "gpu_swapchain.h"
+#include "gpu/gpu_scene.h"
 #include "gpu_pipeline.h"
 #include "gpu_frame.h"
 
@@ -20,6 +21,7 @@ struct aso_vk_ctx
 
   aso_vk_device    device;
   aso_vk_swapchain swapchain;
+  aso_vk_scene     scene;
   aso_vk_pipeline  pipeline;
   aso_vk_frame     frame;
 

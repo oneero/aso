@@ -38,7 +38,7 @@ void aso_vk_create_command_buffers(aso_vk_frame *frame, const aso_vk_device *dev
   ASO_VK_CHECK(vkAllocateCommandBuffers(device->device, &alloc_info, frame->command_buffers), "Failed to allocate command buffers");
 }
 
-void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain *swapchain, const aso_vk_pipeline *pipeline, u32 image_index) {
+void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain *swapchain, const aso_vk_pipeline *pipeline, const aso_vk_scene *scene, u32 image_index) {
   ASSERT(buffer != NULL);
   ASSERT(swapchain != NULL);
 
@@ -74,11 +74,11 @@ void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain
 
   vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->graphics_pipeline);
 
-  VkBuffer vertex_buffers[] = { pipeline->vertex_buffer };
+  VkBuffer vertex_buffers[] = { scene->vertex_buffer };
   VkDeviceSize offsets[] = { 0 };
   vkCmdBindVertexBuffers(buffer, 0, 1, vertex_buffers, offsets);
 
-  vkCmdBindIndexBuffer(buffer, pipeline->index_buffer, 0, VK_INDEX_TYPE_UINT16);
+  vkCmdBindIndexBuffer(buffer, scene->index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
   // define viewport and scissor as they were set to dynamic
 
@@ -103,7 +103,7 @@ void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain
   // draw!
 
   //vkCmdDraw(buffer, pipeline->vertex_count, 1, 0, 0);
-  vkCmdDrawIndexed(buffer, pipeline->index_count, 1, 0, 0, 0);
+  vkCmdDrawIndexed(buffer, scene->index_count, 1, 0, 0, 0);
   vkCmdEndRenderPass(buffer);
 
   ASO_VK_CHECK(vkEndCommandBuffer(buffer), "Failed to record command buffer");

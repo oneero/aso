@@ -10,6 +10,7 @@
 #include "gpu_swapchain.h"
 #include "gpu_pipeline.h"
 #include "gpu_frame.h"
+#include "gpu_scene.h"
 
 void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
   size_t scratch_mark = scratch->offset;
@@ -23,17 +24,7 @@ void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
   aso_vk_create_graphics_pipeline(scratch, &ctx->pipeline, ctx->device.device, ctx->swapchain.render_pass);
   scratch->offset = scratch_mark;
 
-  // TODO: find a better place for this
-  aso_vk_vertex vertices[] = {
-      {.pos = {.x = -0.5f, .y = -0.5f}, .color = {.x = 1.0f, .y = 0.0f, .z = 0.0f}},
-      {.pos = {.x =  0.5f, .y = -0.5f}, .color = {.x = 0.0f, .y = 1.0f, .z = 0.0f}},
-      {.pos = {.x =  0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 0.0f, .z = 1.0f}},
-      {.pos = {.x = -0.5f, .y =  0.5f}, .color = {.x = 1.0f, .y = 1.0f, .z = 1.0f}},
-  };
-  aso_vk_create_vertex_buffer(vertices, 4, ctx);
-
-  u16 indices[] = { 0, 1, 2, 2, 3, 0 };
-  aso_vk_create_index_buffer(indices, 6, ctx);
+  aso_vk_scene_init(ctx);
 
   aso_vk_create_command_pool(&ctx->frame, &ctx->device);
   aso_vk_create_command_buffers(&ctx->frame, &ctx->device);
@@ -77,7 +68,7 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
   vkResetFences(ctx->device.device, 1, &ctx->frame.in_flight_fences[f]);
   
   vkResetCommandBuffer(ctx->frame.command_buffers[f], 0);
-  aso_vk_record_command_buffer(ctx->frame.command_buffers[f], &ctx->swapchain, &ctx->pipeline, image_index);
+  aso_vk_record_command_buffer(ctx->frame.command_buffers[f], &ctx->swapchain, &ctx->pipeline, &ctx->scene, image_index);
 
   VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   
@@ -133,6 +124,9 @@ void aso_vk_cleanup(aso_vk_ctx *ctx) {
 
   // sync objects, command pool and buffers
   aso_vk_frame_cleanup(&ctx->frame, &ctx->device);
+
+  // buffers, descriptors
+  aso_vk_scene_cleanup(&ctx->scene, &ctx->device);
 
   // pipeline and layout
   aso_vk_pipeline_cleanup(&ctx->pipeline, &ctx->device);

@@ -44,6 +44,7 @@ add_executable(aso
     src/gpu/gpu_swapchain.cpp
     src/gpu/gpu_pipeline.cpp
     src/gpu/gpu_frame.cpp
+    src/gpu/gpu_scene.cpp
 )
 
 target_include_directories(aso PRIVATE ${CMAKE_SOURCE_DIR}/src)
