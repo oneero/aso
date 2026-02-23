@@ -30,6 +30,7 @@
 
 #if defined(_WIN32)
   #define OS_WINDOWS 1
+  #define WIN32_LEAN_AND_MEAN
 #elif defined(__linux__)
   #define OS_LINUX 1
 #else
@@ -96,6 +97,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 typedef float    f32;
+typedef double   f64;
 
 // REGION: MACROS
 

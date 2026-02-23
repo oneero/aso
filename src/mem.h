@@ -30,7 +30,7 @@ struct aso_arena
 #endif
 };
 
-static inline bool aso_is_power_of_two(uintptr_t x) {
+inline bool aso_is_power_of_two(uintptr_t x) {
   return (x & (x - 1)) == 0;
 }
 

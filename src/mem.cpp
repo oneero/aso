@@ -18,7 +18,7 @@ uintptr_t aso_align_forward(uintptr_t ptr, size_t align) {
   return (ptr + align - 1) & ~(align - 1);
 };
 
-static size_t aso_get_os_page_size(void) {
+size_t aso_get_os_page_size(void) {
   static size_t aso_os_page_size = 0;
   if (aso_os_page_size == 0) {
 #if OS_WINDOWS
