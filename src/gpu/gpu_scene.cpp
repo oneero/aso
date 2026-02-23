@@ -1,6 +1,12 @@
+#include <cstddef>
 #include <vulkan/vulkan_core.h>
 
+#include "aso.h"
+#include "base.h"
 #include "gpu.h"
+#include "gpu/gpu_config.h"
+#include "gpu/gpu_device.h"
+#include "math.h"
 #include "gpu_scene.h"
 
 void aso_vk_scene_init(aso_vk_ctx *ctx) {
@@ -14,6 +20,31 @@ void aso_vk_scene_init(aso_vk_ctx *ctx) {
 
   u16 indices[] = { 0, 1, 2, 2, 3, 0 };
   aso_vk_create_index_buffer(indices, 6, ctx);
+
+  aso_vk_create_uniform_buffers(&ctx->scene, &ctx->device);
+
+  aso_vk_create_descriptor_set_layout(&ctx->scene, &ctx->device);
+  aso_vk_create_descriptor_pool(&ctx->scene, &ctx->device);
+  aso_vk_create_descriptor_sets(&ctx->scene, &ctx->device);
+}
+
+void aso_vk_scene_cleanup(aso_vk_scene *scene, const aso_vk_device *device) {
+  ASSERT(scene != NULL);
+  ASSERT(device != NULL);
+
+  vkDestroyBuffer(device->device, scene->vertex_buffer, NULL);
+  vkFreeMemory(device->device, scene->vertex_buffer_memory, NULL);
+  vkDestroyBuffer(device->device, scene->index_buffer, NULL);
+  vkFreeMemory(device->device, scene->index_buffer_memory, NULL);
+
+  for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
+    vkDestroyBuffer(device->device, scene->uniform_buffers[i], NULL);
+    vkFreeMemory(device->device, scene->uniform_buffers_memory[i], NULL);
+  }
+
+  // sets are destroyed implicitly
+  vkDestroyDescriptorPool(device->device, scene->descriptor_pool, NULL);
+  vkDestroyDescriptorSetLayout(device->device, scene->descriptor_set_layout, NULL);
 }
 
 // REGION: BUFFERS
@@ -70,7 +101,7 @@ void aso_vk_copy_buffer(VkBuffer src_buffer, VkBuffer dst_buffer, VkDeviceSize s
   vkCmdCopyBuffer(command_buffer, src_buffer, dst_buffer, 1, &copy_region);
 }
 
-    // REGION: VERTEX
+// REGION: VERTEX
 
 aso_vk_vertex_descriptions aso_vk_get_vertex_descriptions(void) {
   return aso_vk_vertex_descriptions {
@@ -192,12 +223,130 @@ void aso_vk_create_index_buffer(u16 *indices, u32 index_count, aso_vk_ctx *ctx) 
   ctx->scene.index_count = index_count;
 }
 
-void aso_vk_scene_cleanup(aso_vk_scene *scene, const aso_vk_device *device) {
+// REGION: UBOs
+
+void aso_vk_create_uniform_buffers(aso_vk_scene *scene, const aso_vk_device *device) {
   ASSERT(scene != NULL);
   ASSERT(device != NULL);
 
-  vkDestroyBuffer(device->device, scene->vertex_buffer, NULL);
-  vkFreeMemory(device->device, scene->vertex_buffer_memory, NULL);
-  vkDestroyBuffer(device->device, scene->index_buffer, NULL);
-  vkFreeMemory(device->device, scene->index_buffer_memory, NULL);
+  VkDeviceSize buffer_size = sizeof(aso_vk_ubo);
+
+  // no staging as the buffers are updated every frame
+
+  for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
+    aso_vk_create_buffer(buffer_size,
+                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                         device,
+                         &scene->uniform_buffers[i],
+                         &scene->uniform_buffers_memory[i]);
+
+    vkMapMemory(device->device, scene->uniform_buffers_memory[i], 0, buffer_size, 0, &scene->uniform_buffers_mapped[i]);
+  }
 }
+
+void aso_vk_update_uniform_buffers(u32 current_frame, const aso_vk_scene *scene, VkExtent2D extent) {
+  ASSERT(scene != NULL);
+
+  f32 time = (f32)aso_clock_elapsed_s(&g_ctx->app_clock);
+
+  aso_vk_ubo ubo = {};
+  ubo.model = aso_rot_m4(time * aso_rad(90.0f), v3f32 {.x = 0.0f, .y = 0.0f, .z = 1.0f});
+  ubo.view = aso_lookat(v3f32 {.x = 2.0f, .y = 2.0f, .z = 2.0f}, v3f32 {.x = 0.0f, .y = 0.0f, .z = 0.0f}, v3f32 {.x = 0.0f, .y = 0.0f, .z = 1.0f});
+  ubo.proj = aso_perspective(aso_rad(45.0f), (f32)extent.width / (f32)extent.height, 0.1f, 10.0f);
+
+  //ubo.proj.v[1][1] *= -1;
+
+  memcpy(scene->uniform_buffers_mapped[current_frame], &ubo, sizeof(ubo));
+}
+
+// REGION: DESCRIPTORS
+
+void aso_vk_create_descriptor_set_layout(aso_vk_scene *scene, const aso_vk_device *device) {
+  ASSERT(scene != NULL);
+  ASSERT(device != NULL);
+
+  VkDescriptorSetLayoutBinding ubo_layout_binding = {
+    .binding = 0,
+    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    .descriptorCount = 1,
+    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    .pImmutableSamplers = NULL, // optional
+  };
+
+  VkDescriptorSetLayoutCreateInfo layout_info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+    .bindingCount = 1,
+    .pBindings = &ubo_layout_binding,
+  };
+
+  ASO_VK_CHECK(vkCreateDescriptorSetLayout(device->device, &layout_info, NULL, &scene->descriptor_set_layout), "Failed to create descriptor set layout");
+}
+
+void aso_vk_create_descriptor_pool(aso_vk_scene *scene, const aso_vk_device *device) {
+  ASSERT(scene != NULL);
+  ASSERT(device != NULL);
+
+  VkDescriptorPoolSize pool_size = {
+    .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    .descriptorCount = ASO_VK_FRAMES_IN_FLIGHT
+  };
+
+  VkDescriptorPoolCreateInfo pool_info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+    .maxSets = ASO_VK_FRAMES_IN_FLIGHT,
+    .poolSizeCount = 1,
+    .pPoolSizes = &pool_size,
+  };
+
+  ASO_VK_CHECK(vkCreateDescriptorPool(device->device, &pool_info, NULL, &scene->descriptor_pool), "Failed to create descriptor pool");
+}
+
+void aso_vk_create_descriptor_sets(aso_vk_scene *scene, const aso_vk_device *device) {
+  ASSERT(scene != NULL);
+  ASSERT(device != NULL);
+
+  // allocate descriptor sets
+
+  // Vulkan wants an array with a copy of our layout for each set we want to create
+  VkDescriptorSetLayout layouts[ASO_VK_FRAMES_IN_FLIGHT];
+  for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
+    layouts[i] = scene->descriptor_set_layout;
+  }
+
+  VkDescriptorSetAllocateInfo alloc_info = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    .descriptorPool = scene->descriptor_pool,
+    .descriptorSetCount = ASO_VK_FRAMES_IN_FLIGHT,
+    .pSetLayouts = layouts
+  };
+
+  ASO_VK_CHECK(vkAllocateDescriptorSets(device->device, &alloc_info, scene->descriptor_sets), "Failed to allocate descriptor sets");
+
+  // configure descriptor sets
+
+  for (size_t i = 0; i < ASO_VK_FRAMES_IN_FLIGHT; i++) {
+    VkDescriptorBufferInfo buffer_info = {
+      .buffer = scene->uniform_buffers[i],
+      .offset = 0,
+      .range = sizeof(aso_vk_ubo)
+    };
+
+    VkWriteDescriptorSet desc_write = {
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .dstSet = scene->descriptor_sets[i],
+      .dstBinding = 0,
+      .dstArrayElement = 0,
+
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+
+      .pImageInfo = NULL, // optional
+      .pBufferInfo = &buffer_info,
+      .pTexelBufferView = NULL, // optional
+    };
+
+    vkUpdateDescriptorSets(device->device, 1, &desc_write, 0, NULL);
+  }
+}
+

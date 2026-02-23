@@ -23,7 +23,7 @@ struct aso_vk_frame
 
 void aso_vk_create_command_pool(aso_vk_frame *frame, const aso_vk_device *device);
 void aso_vk_create_command_buffers(aso_vk_frame *frame, const aso_vk_device *device);
-void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain *swapchain, const aso_vk_pipeline *pipeline, const aso_vk_scene *scene, u32 image_index);
+void aso_vk_record_command_buffer(VkCommandBuffer buffer, const aso_vk_swapchain *swapchain, const aso_vk_pipeline *pipeline, const aso_vk_scene *scene, u32 image_index, u32 current_frame);
 void aso_vk_create_sync_objects(aso_vk_frame *frame, const aso_vk_device *device);
 
 void aso_vk_frame_cleanup(aso_vk_frame *frame, const aso_vk_device *device);

@@ -5,18 +5,27 @@
 #include <vulkan/vulkan_core.h>
 
 #include "base.h"
+#include "gpu/gpu_config.h"
 #include "gpu/gpu_device.h"
 #include "math.h"
 
 struct aso_vk_ctx;
 
-struct aso_vk_scene {
-  u32              vertex_count;
-  u32              index_count;
-  VkBuffer         vertex_buffer;
-  VkDeviceMemory   vertex_buffer_memory;
-  VkBuffer         index_buffer;
-  VkDeviceMemory   index_buffer_memory;
+struct aso_vk_scene
+{
+  u32                   vertex_count;
+  u32                   index_count;
+  VkBuffer              vertex_buffer;
+  VkDeviceMemory        vertex_buffer_memory;
+  VkBuffer              index_buffer;
+  VkDeviceMemory        index_buffer_memory;
+  VkBuffer              uniform_buffers[ASO_VK_FRAMES_IN_FLIGHT];
+  VkDeviceMemory        uniform_buffers_memory[ASO_VK_FRAMES_IN_FLIGHT];
+  void                 *uniform_buffers_mapped[ASO_VK_FRAMES_IN_FLIGHT];
+
+  VkDescriptorSetLayout descriptor_set_layout;
+  VkDescriptorPool      descriptor_pool;
+  VkDescriptorSet       descriptor_sets[ASO_VK_FRAMES_IN_FLIGHT];
 };
 
 void aso_vk_scene_init(aso_vk_ctx *ctx);
@@ -51,5 +60,14 @@ struct aso_vk_ubo {
   m4f32 view;
   m4f32 proj;
 };
+
+void aso_vk_create_uniform_buffers(aso_vk_scene *scene, const aso_vk_device *device);
+void aso_vk_update_uniform_buffers(u32 current_frame, const aso_vk_scene *scene, VkExtent2D extent);
+
+// REGION: DESCRIPTORS
+
+void aso_vk_create_descriptor_set_layout(aso_vk_scene *scene, const aso_vk_device *device);
+void aso_vk_create_descriptor_pool(aso_vk_scene *scene, const aso_vk_device *device);
+void aso_vk_create_descriptor_sets(aso_vk_scene *scene, const aso_vk_device *device);
 
 #endif // ASO_GPU_SCENE_H

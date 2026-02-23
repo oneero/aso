@@ -8,7 +8,7 @@
 #include "gpu_pipeline.h"
 #include "gpu_scene.h"
 
-void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeline, VkDevice device, VkRenderPass render_pass) {
+void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeline, VkDevice device, VkRenderPass render_pass, VkDescriptorSetLayout *descriptor_set_layout) {
   ASSERT(scratch != NULL);
   ASSERT(pipeline != NULL);
   ASSERT(device != NULL);
@@ -82,7 +82,7 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeli
     .rasterizerDiscardEnable = VK_FALSE,
     .polygonMode = VK_POLYGON_MODE_FILL,
     .cullMode = VK_CULL_MODE_BACK_BIT,
-    .frontFace = VK_FRONT_FACE_CLOCKWISE,
+    .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 
     .depthBiasEnable = VK_FALSE,
     .depthBiasConstantFactor = 0.0f, // optional
@@ -128,12 +128,10 @@ void aso_vk_create_graphics_pipeline(aso_arena *scratch, aso_vk_pipeline *pipeli
     .blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f } // optional
   };
 
-  // pipeline layout for uniforms
-
   VkPipelineLayoutCreateInfo pipeline_layout_info = {
     .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-    .setLayoutCount = 0, // optional
-    .pSetLayouts = NULL, // optional
+    .setLayoutCount = 1,
+    .pSetLayouts = descriptor_set_layout,
     .pushConstantRangeCount = 0, // optional
     .pPushConstantRanges = NULL, // optional
   };

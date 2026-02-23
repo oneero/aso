@@ -14,22 +14,25 @@
 
 void aso_vk_init(aso_arena *scratch, aso_vk_ctx *ctx) {
   size_t scratch_mark = scratch->offset;
+  
   aso_vk_device_init(scratch, &ctx->device);
   scratch->offset = scratch_mark;
+  
   aso_vk_immediate_create(ctx);
+  
   aso_vk_swapchain_create(&ctx->swapchain, &ctx->device);
   aso_vk_swapchain_create_image_views(&ctx->swapchain, &ctx->device);
   aso_vk_swapchain_create_render_pass(&ctx->swapchain, &ctx->device);
   aso_vk_swapchain_create_framebuffers(&ctx->swapchain, &ctx->device);
-  aso_vk_create_graphics_pipeline(scratch, &ctx->pipeline, ctx->device.device, ctx->swapchain.render_pass);
-  scratch->offset = scratch_mark;
-
+  
   aso_vk_scene_init(ctx);
+
+  aso_vk_create_graphics_pipeline(scratch, &ctx->pipeline, ctx->device.device, ctx->swapchain.render_pass, &ctx->scene.descriptor_set_layout);
+  scratch->offset = scratch_mark;
 
   aso_vk_create_command_pool(&ctx->frame, &ctx->device);
   aso_vk_create_command_buffers(&ctx->frame, &ctx->device);
   aso_vk_create_sync_objects(&ctx->frame, &ctx->device);
-
 }
 
 // REGION: DRAW FRAME
@@ -66,9 +69,11 @@ void aso_vk_draw_frame(aso_vk_ctx *ctx) {
 
   // reset fence after we know we will be using acquired image
   vkResetFences(ctx->device.device, 1, &ctx->frame.in_flight_fences[f]);
+
+  aso_vk_update_uniform_buffers(f, &ctx->scene, ctx->swapchain.extent);
   
   vkResetCommandBuffer(ctx->frame.command_buffers[f], 0);
-  aso_vk_record_command_buffer(ctx->frame.command_buffers[f], &ctx->swapchain, &ctx->pipeline, &ctx->scene, image_index);
+  aso_vk_record_command_buffer(ctx->frame.command_buffers[f], &ctx->swapchain, &ctx->pipeline, &ctx->scene, image_index, f);
 
   VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   
