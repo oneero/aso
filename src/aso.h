@@ -5,14 +5,17 @@
 #include "input.h"
 #include "window.h"
 #include "mem.h"
+#include "clock.h"
 
 // state context
-struct aso_ctx {
-  aso_window window;
-  aso_vk_ctx vulkan;
+struct aso_ctx
+{
+  aso_window     window;
+  aso_vk_ctx     vulkan;
   aso_cmd_buffer cmds;
-  int running;
-  aso_arena *scratch;  
+  int            running;
+  aso_arena     *scratch;
+  aso_clock      app_clock;
 };
 
 extern aso_ctx *g_ctx;

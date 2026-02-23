@@ -1,5 +1,6 @@
 #include "aso.h"
 #include "base.h"
+#include "clock.h"
 #include "gpu/gpu.h"
 #include "input.h"
 #include "mem.h"
@@ -12,6 +13,8 @@ void aso_init(aso_ctx *ctx) {
 
   // set global context pointer
   g_ctx = ctx;
+
+  ctx->app_clock = aso_clock_start(); 
 
   // initialize a scratch arena
   ctx->scratch = aso_arena_create();
