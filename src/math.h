@@ -187,32 +187,31 @@ inline m4f32 aso_rot_m4(f32 angle, v3f32 axis) {
 inline m4f32 aso_lookat(v3f32 from, v3f32 to, v3f32 up) {
   m4f32 result = {};
 
-  v3f32 f = aso_norm_v3(aso_sub_v3(to, from)); // forward direction
-  v3f32 s = aso_norm_v3(aso_cross_v3(f, up));  // side
-  v3f32 u = aso_cross_v3(s, f);                        // up
+  v3f32 b = aso_norm_v3(aso_sub_v3(from, to)); // backward direction, towards from/camera
+  v3f32 s = aso_norm_v3(aso_cross_v3(up, b));  // side
+  v3f32 u = aso_cross_v3(b, s);                        // up
 
   // axes are transposed to invert the rotation
-  // forward/z is flipped
   // translation is projected onto axes and flipped
 
   result.v[0][0] = s.x;
   result.v[0][1] = u.x;
-  result.v[0][2] = -f.x;
+  result.v[0][2] = b.x;
   result.v[0][3] = 0.0f;
 
   result.v[1][0] = s.y;
   result.v[1][1] = u.y;
-  result.v[1][2] = -f.y;
+  result.v[1][2] = b.y;
   result.v[1][3] = 0.0f;
 
   result.v[2][0] = s.z;
   result.v[2][1] = u.z;
-  result.v[2][2] = -f.z;
+  result.v[2][2] = b.z;
   result.v[2][3] = 0.0f;
 
   result.v[3][0] = -aso_dot_v3(s, from);
   result.v[3][1] = -aso_dot_v3(u, from);
-  result.v[3][2] = aso_dot_v3(f, from); // already inverse
+  result.v[3][2] = -aso_dot_v3(b, from);
   result.v[3][3] = 1.0f;
 
   return result;

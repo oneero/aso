@@ -11,14 +11,15 @@
 
 void aso_vk_scene_init(aso_vk_ctx *ctx) {
   aso_vk_vertex vertices[] = {
-      {.pos = {.x = -0.5f, .y = -0.5f}, .color = {.x = 1.0f, .y = 0.0f, .z = 0.0f}},
-      {.pos = {.x =  0.5f, .y = -0.5f}, .color = {.x = 0.0f, .y = 1.0f, .z = 0.0f}},
-      {.pos = {.x =  0.5f, .y =  0.5f}, .color = {.x = 0.0f, .y = 0.0f, .z = 1.0f}},
-      {.pos = {.x = -0.5f, .y =  0.5f}, .color = {.x = 1.0f, .y = 1.0f, .z = 1.0f}},
+      {.pos = {.x = -0.5f, .y = 0.0f, .z = -0.5f}, .color = {.x = 1.0f, .y = 0.0f, .z = 0.0f}},
+      {.pos = {.x =  0.5f, .y = 0.0f, .z = -0.5f}, .color = {.x = 0.0f, .y = 1.0f, .z = 0.0f}},
+      {.pos = {.x =  0.5f, .y = 0.0f, .z =  0.5f}, .color = {.x = 0.0f, .y = 0.0f, .z = 1.0f}},
+      {.pos = {.x = -0.5f, .y = 0.0f, .z =  0.5f}, .color = {.x = 1.0f, .y = 1.0f, .z = 1.0f}},
   };
   aso_vk_create_vertex_buffer(vertices, 4, ctx);
 
-  u16 indices[] = { 0, 1, 2, 2, 3, 0 };
+  // counter-clockwise
+  u16 indices[] = { 2, 1, 0, 2, 0, 3 };
   aso_vk_create_index_buffer(indices, 6, ctx);
 
   aso_vk_create_uniform_buffers(&ctx->scene, &ctx->device);
@@ -114,7 +115,7 @@ aso_vk_vertex_descriptions aso_vk_get_vertex_descriptions(void) {
   { // pos
         .location = 0,
         .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(aso_vk_vertex, pos)
       },
   { // color
@@ -251,11 +252,9 @@ void aso_vk_update_uniform_buffers(u32 current_frame, const aso_vk_scene *scene,
   f32 time = (f32)aso_clock_elapsed_s(&g_ctx->app_clock);
 
   aso_vk_ubo ubo = {};
-  ubo.model = aso_rot_m4(time * aso_rad(90.0f), v3f32 {.x = 0.0f, .y = 0.0f, .z = 1.0f});
-  ubo.view = aso_lookat(v3f32 {.x = 2.0f, .y = 2.0f, .z = 2.0f}, v3f32 {.x = 0.0f, .y = 0.0f, .z = 0.0f}, v3f32 {.x = 0.0f, .y = 0.0f, .z = 1.0f});
+  ubo.model = aso_rot_m4(time * aso_rad(90.0f), v3f32 {.x = 0.0f, .y = 1.0f, .z = 0.0f});
+  ubo.view = aso_lookat(v3f32 {.x = 2.0f, .y = 2.0f, .z = 2.0f}, v3f32 {.x = 0.0f, .y = 0.0f, .z = 0.0f}, v3f32 {.x = 0.0f, .y = 1.0f, .z = 0.0f});
   ubo.proj = aso_perspective(aso_rad(45.0f), (f32)extent.width / (f32)extent.height, 0.1f, 10.0f);
-
-  //ubo.proj.v[1][1] *= -1;
 
   memcpy(scene->uniform_buffers_mapped[current_frame], &ubo, sizeof(ubo));
 }

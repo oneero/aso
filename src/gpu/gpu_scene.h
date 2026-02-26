@@ -35,7 +35,7 @@ void aso_vk_scene_cleanup(aso_vk_scene *scene, const aso_vk_device *device);
 
 struct aso_vk_vertex
 {
-  v2f32 pos;
+  v3f32 pos;
   v3f32 color;
 };
 
