@@ -31,7 +31,7 @@ union v3f32 {
   f32 v[3];
 };
 
-union v4f32 {
+union alignas(16) v4f32 {
   struct {
     f32 x;
     f32 y;
@@ -41,7 +41,7 @@ union v4f32 {
   f32 v[4];
 };
 
-union m4f32 {
+union alignas(16) m4f32 {
   v4f32 col[4];
   f32   v[4][4];
 };
